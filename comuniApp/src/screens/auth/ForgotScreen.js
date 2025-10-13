@@ -1,4 +1,3 @@
-// src/screens/auth/ForgotScreen.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../../context/AuthProvider';
@@ -6,19 +5,38 @@ import { useAuth } from '../../context/AuthProvider';
 export default function ForgotScreen() {
     const { resetPassword } = useAuth();
     const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const onSubmit = async () => {
         if (!email) return Alert.alert('Falta email', 'Ingresa tu correo');
-        const { error } = await resetPassword(email.trim());
-        if (error) return Alert.alert('Error', error.message);
-        Alert.alert('Enviado', 'Si el correo existe, recibirás un enlace para restablecer.');
+
+        try {
+            setLoading(true);
+            const { error } = await resetPassword(email.trim());
+            setLoading(false);
+
+            if (error) return Alert.alert('Error', error.message);
+
+            Alert.alert(
+                'Enlace enviado',
+                'Si el correo existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña.'
+            );
+        } catch (e) {
+            setLoading(false);
+            Alert.alert('Error', e.message);
+        }
     };
 
     return (
         <View style={styles.container}>
             <Text style={styles.h1}>Reset password</Text>
             <TextInput placeholder="Email" autoCapitalize="none" style={styles.input} value={email} onChangeText={setEmail} />
-            <Pressable style={styles.primary} onPress={onSubmit}><Text style={styles.primaryText}>Send link</Text></Pressable>
+            <Pressable style={styles.primary} onPress={onSubmit} disabled={loading}>
+                <Text style={styles.primaryText}>{loading ? 'Sending...' : 'Send link'}</Text>
+            </Pressable>
+            <Text style={{ color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
+                Te enviaremos un enlace a {email || 'tu correo'} para restablecer la contraseña.
+            </Text>
         </View>
     );
 }

@@ -1,9 +1,8 @@
-// src/screens/SignInScreen.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
 import PrimaryButton from '../../components/PrimaryButton';
-import { useAuth } from '../../context/AuthProvider'; // <-- ajusta si tu archivo se llama distinto
+import { useAuth } from '../../context/AuthProvider';
 
 export default function SignInScreen({ navigation }) {
     const { signIn } = useAuth();
@@ -14,11 +13,29 @@ export default function SignInScreen({ navigation }) {
 
     const handleSignIn = async () => {
         if (!email || !password) return Alert.alert('Faltan datos', 'Ingresa email y contraseña');
-        setLoading(true);
-        const { error } = await signIn(email.trim(), password);
-        setLoading(false);
-        if (error) return Alert.alert('Error', error.message);
-        navigation.replace('SelectGroup');
+
+        try {
+            setLoading(true);
+            const { error } = await signIn(email.trim(), password);
+            setLoading(false);
+
+            if (error) {
+                const msg = (error.message || '').toLowerCase();
+                // Mensaje específico si el correo no se ha confirmado (varía según idioma/config)
+                if (msg.includes('confirm') || msg.includes('verified') || msg.includes('verificar') || msg.includes('confirmado')) {
+                    return Alert.alert(
+                        'Confirma tu correo',
+                        'Tu correo aún no está confirmado. Revisa tu bandeja de entrada y completa la verificación antes de iniciar sesión.'
+                    );
+                }
+                return Alert.alert('Error', error.message);
+            }
+
+            navigation.replace('SelectGroup');
+        } catch (e) {
+            setLoading(false);
+            Alert.alert('Error', e.message);
+        }
     };
 
     return (
@@ -76,6 +93,11 @@ export default function SignInScreen({ navigation }) {
                         </Text>
                     </Pressable>
                 </View>
+
+                {/* Nota de ayuda */}
+                <Text style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
+                    ¿No te llegó el correo? Revisa SPAM o solicita otro desde “Forgot Password”.
+                </Text>
             </View>
         </KeyboardAvoidingView>
     );

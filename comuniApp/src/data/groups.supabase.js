@@ -4,46 +4,65 @@ import { supabase } from '../lib/supabase';
  * Crea un grupo con el usuario actual como owner.
  * Requiere policy de insert: owner_id = auth.uid()
  */
-export async function createGroup({ name, description = '' }) {
+export async function createGroup({ name, description }) {
     const { data: { user }, error: aerr } = await supabase.auth.getUser();
     if (aerr || !user) throw aerr || new Error('No auth user');
 
-    // IMPORTANTE: enviar owner_id para cumplir NOT NULL y la RLS de insert
-    const { data, error } = await supabase
+    // 1) Crea el grupo
+    const { data: g, error } = await supabase
         .from('groups')
         .insert({
-            name: name.trim(),
-            description: description.trim() || null,
-            owner_id: user.id,            // <<-- clave
-            privacy: 'PUBLIC',            // opcional si tienes default
+            name,
+            description: description || null,
+            owner_id: user.id,
+            privacy: 'PUBLIC',     // ajusta si quieres otro default
+            status: 'APPROVED',    // o 'PENDING' si lo aprueba un admin global
         })
         .select('id, name')
         .single();
 
-    if (error) {
-        // imprime detalles útiles en consola para depurar
-        console.log('createGroup error:', error);
-        throw error;
-    }
-    return data; // { id, name }
+    if (error) throw error;
+
+    // 2) Inserta membresía OWNER para el creador
+    const { error: mErr } = await supabase
+        .from('group_members')
+        .insert({
+            group_id: g.id,
+            user_id: user.id,
+            role: 'OWNER',
+        });
+
+    // Si ya existiera por algún motivo, puedes ignorar duplicados (23505)
+    if (mErr && mErr.code !== '23505') throw mErr;
+
+    return g; // { id, name }
 }
 
 export async function listGroupsByName(q = '') {
-    const { data, error } = await supabase
+    let query = supabase
         .from('groups')
-        .select('id, name, description')
-        .order('created_at', { ascending: false });
+        .select('id, name, privacy, status')
+        .eq('privacy', 'PUBLIC')
+        .eq('status', 'APPROVED')
+        .order('name', { ascending: true });
 
+    if (q) query = query.ilike('name', `%${q}%`);
+
+    const { data, error } = await query;
     if (error) throw error;
-
-    const ql = q.trim().toLowerCase();
-    return ql ? data.filter(g => g.name.toLowerCase().includes(ql)) : data;
+    return data || [];
 }
 
-// src/data/groups.supabase.js
 export async function setSelectedGroup(groupId) {
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('profiles').upsert({ id: user.id, selected_group_id: groupId }, { onConflict: 'id' });
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) throw aerr || new Error('No auth user');
+
+    const { error } = await supabase
+        .from('profiles')
+        .upsert({ id: user.id, selected_group_id: groupId }, { onConflict: 'id' });
+
+    if (error) throw error;
+    return true;
 }
 
 export async function getSelectedGroup() {
@@ -65,4 +84,64 @@ export async function getGroupName(groupId) {
         .eq('id', groupId).single();
     if (error) throw error;
     return data?.name || null;
+}
+
+export async function requestJoinGroup(groupId) {
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) throw aerr || new Error('No authenticated user');
+
+    // ¿Ya existe solicitud?
+    const { data: existing, error: e1 } = await supabase
+        .from('group_join_requests')
+        .select('id, status')
+        .eq('group_id', groupId)
+        .eq('user_id', user.id)   // <-- usa user_id
+        .maybeSingle();
+
+    if (e1) throw e1;
+    if (existing && String(existing.status).toUpperCase() === 'PENDING') {
+        return { already: true };
+    }
+
+    // Crear solicitud
+    const { data, error } = await supabase
+        .from('group_join_requests')
+        .insert({ group_id: groupId, user_id: user.id, status: 'PENDING' }) // <-- usa user_id
+        .select('id')
+        .single();
+
+    if (error) throw error;
+    return { id: data.id, already: false };
+}
+
+export async function listMyMemberships() {
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) throw aerr || new Error('No auth user');
+
+    const { data, error } = await supabase
+        .from('group_members')
+        .select('group_id, role')
+        .eq('user_id', user.id);
+
+    if (error) throw error;
+    return data || [];
+}
+
+export async function listMyJoinRequestsPending() {
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) return [];
+
+    const { data, error } = await supabase
+        .from('group_join_requests')
+        .select('group_id, status')
+        .eq('user_id', user.id);  // <-- usa user_id
+
+    if (error) {
+        console.warn('listMyJoinRequestsPending error:', error);
+        return [];
+    }
+
+    return (data || [])
+        .filter(r => String(r.status).toUpperCase() === 'PENDING')
+        .map(r => r.group_id);
 }
