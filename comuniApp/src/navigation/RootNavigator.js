@@ -4,7 +4,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import SplashScreen from '../screens/SplashScreen';
-import SignInScreen from '../screens/SignInScreen';
 import SelectGroupScreen from '../screens/SelectGroupScreen';
 
 import ExploreScreen from '../screens/ExploreScreen';
@@ -20,6 +19,9 @@ import CreateEventScreen from '../screens/CreateEventScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 
+import SignInScreen from '../screens/auth/SignInScreen';
+import SignUpScreen from '../screens/auth/SignUpScreen';
+import ForgotScreen from '../screens/auth/ForgotScreen';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -75,6 +77,8 @@ export default function RootNavigator() {
         <Stack.Navigator>
             <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
             <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Create account' }} />
+            <Stack.Screen name="Forgot" component={ForgotScreen} options={{ title: 'Reset password' }} />
             <Stack.Screen name="SelectGroup" component={SelectGroupScreen} options={{ title: 'Select Group' }} />
             <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
             <Stack.Screen

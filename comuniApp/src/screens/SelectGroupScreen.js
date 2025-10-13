@@ -1,17 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, FlatList, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-const MOCK_GROUPS = [
-    { id: '1', name: 'Barrio La Florida' },
-    { id: '2', name: 'Comité Deportivo' },
-    { id: '3', name: 'Vecinos de San Luis' },
-];
+import { listGroupsByName, setSelectedGroup } from '../data/groups.supabase';
 
 export default function SelectGroupScreen({ navigation }) {
     const [q, setQ] = useState('');
+    const [groups, setGroups] = useState([]);
 
-    const data = MOCK_GROUPS.filter(g => g.name.toLowerCase().includes(q.toLowerCase()));
+    useEffect(() => { load(); }, []);
+    const load = async () => {
+        const data = await listGroupsByName('');
+        setGroups(data);
+    };
+
+    const filtered = q ? groups.filter(g => g.name.toLowerCase().includes(q.toLowerCase())) : groups;
+
+    const onSelect = async (item) => {
+        await setSelectedGroup(item.id);
+        navigation.replace('MainTabs', { groupId: item.id, groupName: item.name });
+    };
 
     return (
         <View style={styles.container}>
@@ -27,14 +34,11 @@ export default function SelectGroupScreen({ navigation }) {
             </View>
 
             <FlatList
-                data={data}
+                data={filtered}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={{ paddingVertical: 8 }}
                 renderItem={({ item }) => (
-                    <Pressable
-                        onPress={() => navigation.replace('MainTabs', { groupId: item.id, groupName: item.name })}
-                        style={styles.item}
-                    >
+                    <Pressable onPress={() => onSelect(item)} style={styles.item}>
                         <Text style={styles.itemText}>{item.name}</Text>
                         <Ionicons name="chevron-forward" size={18} color="#6B7280" />
                     </Pressable>
@@ -42,17 +46,13 @@ export default function SelectGroupScreen({ navigation }) {
                 ListEmptyComponent={<Text style={{ color: '#9CA3AF', marginTop: 12 }}>Sin resultados</Text>}
             />
 
-            <Pressable
-                style={styles.createBtn}
-                onPress={() => navigation.navigate('CreateGroup')}
-            >
+            <Pressable style={styles.createBtn} onPress={() => navigation.navigate('CreateGroup')}>
                 <Ionicons name="add-circle" size={20} color="#4F59F5" />
                 <Text style={{ marginLeft: 6, color: '#4F59F5', fontWeight: '700' }}>Crear nuevo grupo</Text>
             </Pressable>
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', padding: 16 },
     title: { fontSize: 22, fontWeight: '800', color: '#173049', marginBottom: 10 },
