@@ -1,9 +1,11 @@
+// src/screens/auth/SignUpScreen.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { useAuth } from '../../context/AuthProvider';
 
 export default function SignUpScreen({ navigation }) {
     const { signUp } = useAuth();
+    const [displayName, setDisplayName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -13,15 +15,11 @@ export default function SignUpScreen({ navigation }) {
 
         try {
             setLoading(true);
-            const { error } = await signUp(email.trim(), password);
+            const { error } = await signUp(email.trim(), password, displayName.trim());
             setLoading(false);
 
-            if (error) {
-                // Si el correo ya está registrado o formato inválido, etc.
-                return Alert.alert('Error', error.message);
-            }
+            if (error) return Alert.alert('Error', error.message);
 
-            // Éxito: con verificación de email activada, Supabase envía el correo automáticamente
             Alert.alert(
                 'Revisa tu correo',
                 'Hemos enviado un correo de verificación. Por favor confirma tu dirección y luego inicia sesión.',
@@ -36,11 +34,34 @@ export default function SignUpScreen({ navigation }) {
     return (
         <View style={styles.container}>
             <Text style={styles.h1}>Create account</Text>
-            <TextInput placeholder="Email" autoCapitalize="none" style={styles.input} value={email} onChangeText={setEmail} />
-            <TextInput placeholder="Password" secureTextEntry style={styles.input} value={password} onChangeText={setPassword} />
+
+            <TextInput
+                placeholder="Tu nombre"
+                style={styles.input}
+                value={displayName}
+                onChangeText={setDisplayName}
+            />
+
+            <TextInput
+                placeholder="Email"
+                autoCapitalize="none"
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+            />
+
+            <TextInput
+                placeholder="Password"
+                secureTextEntry
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+            />
+
             <Pressable style={styles.primary} onPress={onSubmit} disabled={loading}>
                 <Text style={styles.primaryText}>{loading ? 'Creating...' : 'Sign Up'}</Text>
             </Pressable>
+
             <Text style={{ color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
                 Se enviará un correo de confirmación a {email || 'tu correo'}.
             </Text>

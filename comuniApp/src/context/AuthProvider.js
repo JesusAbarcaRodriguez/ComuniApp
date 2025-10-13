@@ -22,10 +22,21 @@ export function AuthProvider({ children }) {
             setSession(sess ?? null);
         });
 
-        if (!session?.user) return;
+        // Si hay usuario, asegúranos de tener fila en profiles (y setear display_name si viene en metadata)
         (async () => {
-            // Crea el row si no existe
-            await supabase.from('profiles').upsert({ id: session.user.id }, { onConflict: 'id' });
+            if (!session?.user) return;
+            const metaName =
+                session.user.user_metadata?.display_name ||
+                session.user.user_metadata?.full_name ||
+                session.user.user_metadata?.name ||
+                null;
+
+            await supabase
+                .from('profiles')
+                .upsert(
+                    { id: session.user.id, ...(metaName ? { display_name: metaName } : {}) },
+                    { onConflict: 'id' }
+                );
         })();
 
         return () => {
@@ -37,14 +48,35 @@ export function AuthProvider({ children }) {
     const value = {
         session,
         user: session?.user ?? null,
-        signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
-        signUp: (email, password) => supabase.auth.signUp({ email, password }),
+
+        signIn: (email, password) =>
+            supabase.auth.signInWithPassword({ email, password }),
+
+        // ⬇️ aceptamos displayName y lo guardamos en user_metadata
+        signUp: (email, password, displayName) =>
+            supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: { display_name: displayName?.trim() || '' },
+                },
+            }),
+
         signOut: () => supabase.auth.signOut(),
+
         resetPassword: (email) =>
             supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: 'https://TU-PROYECTO.supabase.co/auth/v1/callback', // opcional si usas deep link
+                redirectTo: 'https://TU-PROYECTO.supabase.co/auth/v1/callback',
             }),
-        updateProfile: (data) => supabase.from('profiles').upsert(data),
+
+        // ⬇️ si no pasas id, lo completamos con el usuario actual
+        updateProfile: async (data) => {
+            const { data: u } = await supabase.auth.getUser();
+            const id = data?.id ?? u?.user?.id;
+            if (!id) throw new Error('No hay usuario autenticado');
+            return supabase.from('profiles').upsert({ id, ...data });
+        },
+
         updatePassword: (newPassword) => supabase.auth.updateUser({ password: newPassword }),
     };
 

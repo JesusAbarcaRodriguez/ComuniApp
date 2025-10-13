@@ -1,8 +1,18 @@
+// src/screens/auth/SignInScreen.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
 import PrimaryButton from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthProvider';
+
+function friendlyAuthError(error) {
+    const msg = (error?.message || '').toLowerCase();
+    if (error?.status === 400 || msg.includes('invalid login credentials'))
+        return 'Correo o contraseña inválidos.';
+    if (msg.includes('confirm') || msg.includes('verified') || msg.includes('verificar') || msg.includes('confirmado'))
+        return 'Tu correo aún no está confirmado. Revisa tu bandeja de entrada y completa la verificación.';
+    return error?.message || 'No se pudo iniciar sesión.';
+}
 
 export default function SignInScreen({ navigation }) {
     const { signIn } = useAuth();
@@ -20,18 +30,10 @@ export default function SignInScreen({ navigation }) {
             setLoading(false);
 
             if (error) {
-                const msg = (error.message || '').toLowerCase();
-                // Mensaje específico si el correo no se ha confirmado (varía según idioma/config)
-                if (msg.includes('confirm') || msg.includes('verified') || msg.includes('verificar') || msg.includes('confirmado')) {
-                    return Alert.alert(
-                        'Confirma tu correo',
-                        'Tu correo aún no está confirmado. Revisa tu bandeja de entrada y completa la verificación antes de iniciar sesión.'
-                    );
-                }
-                return Alert.alert('Error', error.message);
+                return Alert.alert('Error', friendlyAuthError(error));
             }
 
-            navigation.replace('SelectGroup');
+            navigation.replace('SelectGroup'); // éxito
         } catch (e) {
             setLoading(false);
             Alert.alert('Error', e.message);
@@ -44,8 +46,8 @@ export default function SignInScreen({ navigation }) {
                 <View style={styles.logoWrap}><Text style={{ fontSize: 42 }}>📅</Text></View>
                 <Text style={styles.title}>ComuniApp</Text>
 
-                {/* Email */}
                 <View style={{ gap: 12, width: '100%' }}>
+                    {/* Email */}
                     <View style={styles.inputWrap}>
                         <AntDesign name="mail" size={18} color="#9CA3AF" />
                         <TextInput
@@ -74,27 +76,22 @@ export default function SignInScreen({ navigation }) {
                     </View>
                 </View>
 
-                {/* Forgot */}
                 <View style={{ marginTop: 12, alignSelf: 'flex-end' }}>
                     <Pressable onPress={() => navigation.navigate('Forgot')}>
                         <Text style={{ color: '#6B7280' }}>Forgot Password?</Text>
                     </Pressable>
                 </View>
 
-                {/* Submit */}
                 <PrimaryButton title={loading ? 'SIGNING IN...' : 'SIGN IN'} onPress={handleSignIn} disabled={loading} />
 
-                {/* Sign up link */}
                 <View style={{ alignItems: 'center', marginTop: 20 }}>
                     <Pressable onPress={() => navigation.navigate('SignUp')}>
                         <Text>
-                            Don’t have an account?{' '}
-                            <Text style={{ color: '#4F59F5', fontWeight: '700' }}>Sign up</Text>
+                            Don’t have an account? <Text style={{ color: '#4F59F5', fontWeight: '700' }}>Sign up</Text>
                         </Text>
                     </Pressable>
                 </View>
 
-                {/* Nota de ayuda */}
                 <Text style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
                     ¿No te llegó el correo? Revisa SPAM o solicita otro desde “Forgot Password”.
                 </Text>

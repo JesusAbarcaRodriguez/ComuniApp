@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, ScrollView, RefreshControl } from 'react-native';
 import {
-    approveGroupJoinRequest, rejectGroupJoinRequest,
-    approveEvent, rejectEvent,
-    approveGroup, rejectGroup,
+    approveGroupJoinRequest,
+    rejectGroupJoinRequest,
+    approveEvent,
+    rejectEvent,
     listAdminNotifications
 } from '../data/requests.supabase';
 
@@ -29,8 +30,11 @@ export default function NotificationsScreen() {
         try {
             const rows = await listAdminNotifications();
             setFeed(rows);
-        } catch (e) { Alert.alert('Error', e.message); }
-        finally { setLoading(false); }
+        } catch (e) {
+            Alert.alert('Error', e.message);
+        } finally {
+            setLoading(false);
+        }
     }, []);
 
     useEffect(() => { load(); }, [load]);
@@ -39,20 +43,50 @@ export default function NotificationsScreen() {
 
     const onAccept = async (item) => {
         try {
-            if (item.type === 'JOIN') await approveGroupJoinRequest(item.id);
-            else if (item.type === 'EVENT') await approveEvent(item.id);
-            else if (item.type === 'GROUP') await approveGroup(item.id);
+            console.log('[NOTIF] Accept pressed ->', item);   // <--- LOG
+            switch (item.type) {
+                case 'JOIN':
+                    await approveGroupJoinRequest(item.id);
+                    Alert.alert('Listo', 'Solicitud de ingreso aprobada.');
+                    break;
+                case 'EVENT':
+                    await approveEvent(item.id);
+                    Alert.alert('Listo', 'Evento aprobado.');
+                    break;
+                default:
+                    console.warn('[NOTIF] Unknown type on accept:', item.type); // <--- LOG
+                    Alert.alert('Aviso', `Tipo desconocido: ${item.type}`);
+                    return;
+            }
             await load();
-        } catch (e) { Alert.alert('Error', e.message); }
+        } catch (e) {
+            console.error('[NOTIF] Accept error:', e);        // <--- LOG
+            Alert.alert('Error', e.message);
+        }
     };
 
     const onReject = async (item) => {
         try {
-            if (item.type === 'JOIN') await rejectGroupJoinRequest(item.id);
-            else if (item.type === 'EVENT') await rejectEvent(item.id);
-            else if (item.type === 'GROUP') await rejectGroup(item.id);
+            console.log('[NOTIF] Reject pressed ->', item);   // <--- LOG
+            switch (item.type) {
+                case 'JOIN':
+                    await rejectGroupJoinRequest(item.id);
+                    Alert.alert('Listo', 'Solicitud de ingreso rechazada.');
+                    break;
+                case 'EVENT':
+                    await rejectEvent(item.id);
+                    Alert.alert('Listo', 'Evento rechazado.');
+                    break;
+                default:
+                    console.warn('[NOTIF] Unknown type on reject:', item.type); // <--- LOG
+                    Alert.alert('Aviso', `Tipo desconocido: ${item.type}`);
+                    return;
+            }
             await load();
-        } catch (e) { Alert.alert('Error', e.message); }
+        } catch (e) {
+            console.error('[NOTIF] Reject error:', e);        // <--- LOG
+            Alert.alert('Error', e.message);
+        }
     };
 
     if (loading) {
@@ -74,8 +108,11 @@ export default function NotificationsScreen() {
     }
 
     return (
-        <ScrollView style={{ flex: 1, backgroundColor: '#fff' }} contentContainerStyle={{ padding: 16 }}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        <ScrollView
+            style={{ flex: 1, backgroundColor: '#fff' }}
+            contentContainerStyle={{ padding: 16 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        >
             {feed.map((n) => (
                 <View key={`${n.type}_${n.id}`} style={styles.item}>
                     <View style={{ flex: 1 }}>
@@ -85,27 +122,22 @@ export default function NotificationsScreen() {
                                 <Text style={styles.sub}>Solicita acceso a {n.groupName}</Text>
                             </>
                         )}
-
                         {n.type === 'EVENT' && (
                             <>
                                 <Text style={styles.title}>{n.title}</Text>
                                 <Text style={styles.sub}>Evento propuesto en {n.groupName}</Text>
                             </>
                         )}
-
-                        {n.type === 'GROUP' && (
-                            <>
-                                <Text style={styles.title}>{n.name}</Text>
-                                <Text style={styles.sub}>Grupo pendiente de aprobación</Text>
-                            </>
-                        )}
-
                         <Text style={styles.time}>{timeago(n.time)}</Text>
                     </View>
 
                     <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <Pressable style={styles.reject} onPress={() => onReject(n)}><Text style={{ color: '#374151' }}>Reject</Text></Pressable>
-                        <Pressable style={styles.accept} onPress={() => onAccept(n)}><Text style={{ color: '#fff', fontWeight: '700' }}>Accept</Text></Pressable>
+                        <Pressable style={styles.reject} onPress={() => onReject(n)}>
+                            <Text style={{ color: '#374151' }}>Reject</Text>
+                        </Pressable>
+                        <Pressable style={styles.accept} onPress={() => onAccept(n)}>
+                            <Text style={{ color: '#fff', fontWeight: '700' }}>Accept</Text>
+                        </Pressable>
                     </View>
                 </View>
             ))}

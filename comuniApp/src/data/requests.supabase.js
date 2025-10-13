@@ -1,18 +1,12 @@
 import { supabase } from '../lib/supabase';
 
-/** Devuelve los group_ids donde el usuario actual es OWNER o ADMIN */
 async function myAdminGroupIds() {
     const { data: { user }, error: aerr } = await supabase.auth.getUser();
     if (aerr || !user) throw aerr || new Error('No auth user');
 
-    // dueños por groups.owner_id
-    const { data: owned, error: e1 } = await supabase
-        .from('groups')
-        .select('id')
-        .eq('owner_id', user.id);
+    const { data: owned, error: e1 } = await supabase.from('groups').select('id').eq('owner_id', user.id);
     if (e1) throw e1;
 
-    // admins por group_members
     const { data: admined, error: e2 } = await supabase
         .from('group_members')
         .select('group_id')
@@ -26,98 +20,118 @@ async function myAdminGroupIds() {
     return Array.from(ids);
 }
 
-/* -------------------- JOIN REQUESTS (unirse a grupo) -------------------- */
-
 export async function listGroupJoinRequestsForAdmin() {
     const adminGroupIds = await myAdminGroupIds();
     if (adminGroupIds.length === 0) return [];
 
-    const { data, error } = await supabase
+    // 1) Traer solicitudes (embebemos groups, eso sí existe por FK)
+    const { data: reqs, error } = await supabase
         .from('group_join_requests')
         .select(`
-      id, status, created_at,
-      group_id,
-      groups ( name ),
-      requester_id,
-      requester:profiles!group_join_requests_requester_id_fkey ( display_name )
-    `)
+        id, status, created_at, group_id, user_id,
+        groups ( name )
+      `)
         .in('group_id', adminGroupIds)
         .eq('status', 'PENDING')
         .order('created_at', { ascending: false });
 
     if (error) throw error;
 
-    // normaliza
-    return (data || []).map(r => ({
+    if (!reqs?.length) return [];
+
+    // 2) Traer nombres desde profiles por user_id
+    const userIds = [...new Set(reqs.map(r => r.user_id))];
+    const { data: profs, error: pErr } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', userIds);
+    if (pErr) throw pErr;
+
+    const pmap = new Map((profs || []).map(p => [p.id, p.display_name || '']));
+
+    // 3) Unir
+    return reqs.map(r => ({
         id: r.id,
         groupId: r.group_id,
-        groupName: r.groups?.name || 'Group',
-        requesterId: r.requester_id,
-        requesterName: r.requester?.display_name || 'User',
+        groupName: r.groups?.name || 'Grupo',
+        requesterId: r.user_id,
+        requesterName: pmap.get(r.user_id) || r.user_id?.slice(0, 8) || 'Usuario',
         time: new Date(r.created_at),
     }));
 }
 
-export async function approveGroupJoinRequest(reqId) {
-    // 1) obtener request
-    const { data: req, error: e1 } = await supabase
+export async function approveGroupJoinRequest(requestId) {
+    // lee solicitud
+    console.log("llega1")
+    const { data: req, error: rErr } = await supabase
         .from('group_join_requests')
-        .select('id, group_id, requester_id, status')
-        .eq('id', reqId)
+        .select('id, group_id, user_id, status')
+        .eq('id', requestId)
         .single();
-    if (e1) throw e1;
-
-    // 2) insertar membresía como MEMBER
-    const { error: e2 } = await supabase
-        .from('group_members')
-        .insert({ group_id: req.group_id, user_id: req.requester_id, role: 'MEMBER' });
-    if (e2) throw e2;
-
-    // 3) actualizar estado de la solicitud
-    const { error: e3 } = await supabase
+    if (rErr) throw rErr;
+    if (!req) throw new Error('Solicitud no encontrada');
+    console.log("llega2");
+    // marca como aprobada
+    const { error: uErr } = await supabase
         .from('group_join_requests')
-        .update({ status: 'APPROVED' })
-        .eq('id', reqId);
-    if (e3) throw e3;
+        .update({ status: 'APPROVED', decided_at: new Date().toISOString() })
+        .eq('id', requestId);
+    if (uErr) throw uErr;
+    console.log("llega3")
+    // inserta miembro (ignora duplicado)
+    const { error: mErr } = await supabase
+        .from('group_members')
+        .insert({ group_id: req.group_id, user_id: req.user_id, role: 'MEMBER' });
+    if (mErr && mErr.code !== '23505') throw mErr;
 
     return true;
 }
 
-export async function rejectGroupJoinRequest(reqId) {
+export async function rejectGroupJoinRequest(requestId) {
     const { error } = await supabase
         .from('group_join_requests')
-        .update({ status: 'REJECTED' })
-        .eq('id', reqId);
+        .update({ status: 'REJECTED', decided_at: new Date().toISOString() })
+        .eq('id', requestId);
     if (error) throw error;
     return true;
 }
 
-/* -------------------- EVENT REQUESTS (aprobar eventos) -------------------- */
+/* -------------------- EVENTS PENDING (propuestos) -------------------- */
 
 export async function listPendingEventsForAdmin() {
     const adminGroupIds = await myAdminGroupIds();
     if (adminGroupIds.length === 0) return [];
 
-    const { data, error } = await supabase
+    // 1) columnas planas (sin embed)
+    const { data: evs, error } = await supabase
         .from('events')
-        .select(`
-        id, title, status, group_id, start_at,
-        groups ( name )
-      `) // <- quitamos el join a profiles/creator por si RLS lo bloquea
+        .select('id, title, group_id, status, created_at, start_at')
         .in('group_id', adminGroupIds)
         .eq('status', 'PENDING')
-        .order('start_at', { ascending: true });
-
+        .order('created_at', { ascending: false });
     if (error) throw error;
 
-    return (data || []).map(e => ({
+    if (!evs?.length) return [];
+
+    // 2) resolver nombres de grupos
+    const groupIds = [...new Set(evs.map(e => e.group_id))];
+    const { data: groups, error: gErr } = await supabase
+        .from('groups')
+        .select('id, name')
+        .in('id', groupIds);
+    if (gErr) throw gErr;
+
+    const gmap = new Map((groups || []).map(g => [g.id, g.name]));
+
+    return evs.map(e => ({
         id: e.id,
+        type: 'EVENT',
+        groupId: e.group_id,
+        groupName: gmap.get(e.group_id) || 'Grupo',
         title: e.title,
-        groupName: e.groups?.name || 'Group',
-        time: e.start_at ? new Date(e.start_at) : new Date(), // fallback para ordenar
+        time: new Date(e.created_at || e.start_at || Date.now()),
     }));
 }
-
 
 export async function approveEvent(eventId) {
     const { error } = await supabase
@@ -137,61 +151,72 @@ export async function rejectEvent(eventId) {
     return true;
 }
 
+/* -------------------- Feed combinado para la pantalla -------------------- */
 
+export async function listAdminNotifications() {
+    const adminGroupIds = await myAdminGroupIds();
+    if (!adminGroupIds.length) return [];
 
-
-export async function listPendingGroupsForOwner() {
-    // Owner ve sus grupos 'PENDING'
-    const { data: { user }, error: aerr } = await supabase.auth.getUser();
-    if (aerr || !user) throw aerr || new Error('No auth user');
-
-    const { data, error } = await supabase
-        .from('groups')
-        .select('id, name, created_at, owner_id')
-        .eq('owner_id', user.id)
+    // 1) JOIN requests (sin joins)
+    const { data: gjr, error: gjrErr } = await supabase
+        .from('group_join_requests')
+        .select('id, group_id, user_id, status, created_at')
+        .in('group_id', adminGroupIds)
         .eq('status', 'PENDING')
         .order('created_at', { ascending: false });
+    if (gjrErr) throw gjrErr;
 
-    if (error) throw error;
+    // 2) EVENTS PENDING (sin joins)
+    const { data: evs, error: evErr } = await supabase
+        .from('events')
+        .select('id, group_id, title, status, created_at, start_at')
+        .in('group_id', adminGroupIds)
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+    if (evErr) throw evErr;
 
-    return (data || []).map(g => ({
-        id: g.id,
-        name: g.name,
-        time: new Date(g.created_at),
-    }));
-}
-
-export async function approveGroup(groupId) {
-    const { error } = await supabase
-        .from('groups')
-        .update({ status: 'APPROVED' })
-        .eq('id', groupId);
-    if (error) throw error;
-    return true;
-}
-
-export async function rejectGroup(groupId) {
-    const { error } = await supabase
-        .from('groups')
-        .update({ status: 'REJECTED' })
-        .eq('id', groupId);
-    if (error) throw error;
-    return true;
-}
-
-/* --------- FEED combinado (ahora incluye GROUP) --------- */
-export async function listAdminNotifications() {
-    const [joins, events, groups] = await Promise.all([
-        listGroupJoinRequestsForAdmin(), // JOIN
-        listPendingEventsForAdmin(),     // EVENT
-        listPendingGroupsForOwner(),     // GROUP
-    ]);
-
-    const feed = [
-        ...groups.map(g => ({ type: 'GROUP', id: g.id, name: g.name, time: g.time })),
-        ...joins.map(j => ({ type: 'JOIN', ...j })),
-        ...events.map(e => ({ type: 'EVENT', ...e })),
+    // 3) Diccionarios para nombres
+    const groupIds = [
+        ...new Set([
+            ...gjr.map(r => r.group_id),
+            ...evs.map(e => e.group_id),
+        ])
     ];
+    const userIds = [...new Set(gjr.map(r => r.user_id))];
 
-    return feed.sort((a, b) => (b.time?.getTime?.() || 0) - (a.time?.getTime?.() || 0));
+    const { data: groups, error: gErr } = await supabase
+        .from('groups')
+        .select('id, name')
+        .in('id', groupIds);
+    if (gErr) throw gErr;
+    const gmap = new Map((groups || []).map(g => [g.id, g.name]));
+
+    const { data: profs, error: pErr } = userIds.length
+        ? await supabase.from('profiles').select('id, display_name').in('id', userIds)
+        : { data: [], error: null };
+    if (pErr) throw pErr;
+    const pmap = new Map((profs || []).map(p => [p.id, p.display_name]));
+
+    // 4) Mapear a items con type DEFINIDO
+    const joinItems = (gjr || []).map(r => ({
+        id: r.id,                  // id de group_join_requests
+        type: 'JOIN',              // <-- clave para tu switch
+        groupId: r.group_id,
+        groupName: gmap.get(r.group_id) || 'Grupo',
+        userId: r.user_id,
+        requesterName: pmap.get(r.user_id) || r.user_id?.slice(0, 8) || 'Usuario',
+        time: new Date(r.created_at),
+    }));
+
+    const eventItems = (evs || []).map(e => ({
+        id: e.id,                  // id del evento
+        type: 'EVENT',             // <-- clave para tu switch
+        groupId: e.group_id,
+        groupName: gmap.get(e.group_id) || 'Grupo',
+        title: e.title,
+        time: new Date(e.created_at || e.start_at || Date.now()),
+    }));
+
+    // 5) Unir y ordenar
+    return [...joinItems, ...eventItems].sort((a, b) => b.time - a.time);
 }
