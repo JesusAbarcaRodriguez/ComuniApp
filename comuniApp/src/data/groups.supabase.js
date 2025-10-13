@@ -1,20 +1,30 @@
 import { supabase } from '../lib/supabase';
 
-export async function createGroup({ name, description }) {
-    const { data: { user }, error: eUser } = await supabase.auth.getUser();
-    if (eUser || !user) throw new Error('No auth user');
+/**
+ * Crea un grupo con el usuario actual como owner.
+ * Requiere policy de insert: owner_id = auth.uid()
+ */
+export async function createGroup({ name, description = '' }) {
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) throw aerr || new Error('No auth user');
 
+    // IMPORTANTE: enviar owner_id para cumplir NOT NULL y la RLS de insert
     const { data, error } = await supabase
         .from('groups')
-        .insert({ name, description: description || '', owner_id: user.id })
+        .insert({
+            name: name.trim(),
+            description: description.trim() || null,
+            owner_id: user.id,            // <<-- clave
+            privacy: 'PUBLIC',            // opcional si tienes default
+        })
         .select('id, name')
         .single();
 
-    if (error) throw error;
-
-    // El trigger en DB ya mete al OWNER en group_members, si no lo tienes:
-    // await supabase.from('group_members').insert({ group_id: data.id, user_id: user.id, role: 'OWNER' });
-
+    if (error) {
+        // imprime detalles útiles en consola para depurar
+        console.log('createGroup error:', error);
+        throw error;
+    }
     return data; // { id, name }
 }
 

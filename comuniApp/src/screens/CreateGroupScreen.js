@@ -1,36 +1,65 @@
+// src/screens/CreateGroupScreen.js
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
-import { createGroup } from '../data/groups.supabase';
+import { createGroup, setSelectedGroup } from '../data/groups.supabase';
 
 export default function CreateGroupScreen({ navigation }) {
     const [name, setName] = useState('');
     const [desc, setDesc] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const onCreate = async () => {
-        if (!name.trim()) return Alert.alert('Requerido', 'El nombre es obligatorio');
+        const trimmed = name.trim();
+        if (!trimmed) return Alert.alert('Requerido', 'El nombre es obligatorio');
         try {
-            const g = await createGroup({ name: name.trim(), description: desc.trim() });
-            Alert.alert('Éxito', 'Grupo creado');
-            navigation.replace('SelectGroup'); // vuelves a seleccionar (o navegar directo a tabs con ese grupo)
+            setLoading(true);
+            const g = await createGroup({ name: trimmed, description: desc.trim() });
+            await setSelectedGroup(g.id);
+
+            Alert.alert('Éxito', 'Grupo creado y seleccionado');
+            // Llévate al Explore con este grupo activo
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'MainTabs', params: { screen: 'Explore', params: { groupId: g.id, groupName: g.name } } }],
+            });
         } catch (e) {
             Alert.alert('Error', e.message);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Crear grupo</Text>
+
             <Text style={styles.label}>Nombre del grupo</Text>
-            <TextInput value={name} onChangeText={setName} placeholder="Ej. Vecinos de San Luis" style={styles.input} />
+            <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder="Ej. Vecinos de San Luis"
+                style={styles.input}
+                autoCapitalize="words"
+                autoCorrect={false}
+            />
+
             <Text style={styles.label}>Descripción</Text>
-            <TextInput value={desc} onChangeText={setDesc} placeholder="¿De qué trata el grupo?" style={[styles.input, { height: 90 }]} multiline />
+            <TextInput
+                value={desc}
+                onChangeText={setDesc}
+                placeholder="¿De qué trata el grupo?"
+                style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+                multiline
+            />
+
             <View style={{ marginTop: 16 }}>
-                <PrimaryButton title="Crear" onPress={onCreate} icon="checkmark" />
+                <PrimaryButton title={loading ? 'Creando...' : 'Crear'} onPress={onCreate} icon="checkmark" disabled={loading} />
             </View>
         </View>
     );
 }
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', padding: 16 },
     title: { fontSize: 22, fontWeight: '800', color: '#173049', marginBottom: 16 },

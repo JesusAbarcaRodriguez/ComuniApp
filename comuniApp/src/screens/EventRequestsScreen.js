@@ -1,28 +1,47 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-
-const EVENT_REQS = [
-    { id: 'e1', title: 'Clases de baloncesto', group: 'Comité Deportivo', time: 'Just now' },
-    { id: 'e2', title: 'Reciclaje comunitario', group: 'Vecinos de San Luis', time: '20 min ago' },
-];
+// src/screens/EventRequestsScreen.js
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, Alert, ScrollView, RefreshControl } from 'react-native';
+import { listPendingEventsForAdmin, approveEvent, rejectEvent } from '../data/requests.supabase';
 
 export default function EventRequestsScreen() {
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await listPendingEventsForAdmin();
+            setRows(data);
+        } catch (e) { Alert.alert('Error', e.message); }
+        finally { setLoading(false); }
+    }, []);
+
+    useEffect(() => { load(); }, [load]);
+
+    const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+
+    const onAccept = async (id) => { try { await approveEvent(id); await load(); } catch (e) { Alert.alert('Error', e.message); } };
+    const onReject = async (id) => { try { await rejectEvent(id); await load(); } catch (e) { Alert.alert('Error', e.message); } };
+
     return (
-        <View style={styles.container}>
-            {EVENT_REQS.map(r => (
+        <ScrollView style={styles.container} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+            {loading && <Text style={{ color: '#6B7280' }}>Cargando...</Text>}
+            {rows.map(r => (
                 <View key={r.id} style={styles.row}>
                     <View>
                         <Text style={styles.title}>{r.title}</Text>
-                        <Text style={styles.sub}>Propuesto en {r.group}</Text>
-                        <Text style={styles.time}>{r.time}</Text>
+                        <Text style={styles.sub}>Propuesto en {r.groupName}</Text>
+                        <Text style={styles.time}>{r.time ? new Date(r.time).toLocaleString() : ''}</Text>
                     </View>
                     <View style={styles.actions}>
-                        <Pressable style={styles.reject}><Text>Reject</Text></Pressable>
-                        <Pressable style={styles.accept}><Text style={{ color: '#fff', fontWeight: '700' }}>Accept</Text></Pressable>
+                        <Pressable style={styles.reject} onPress={() => onReject(r.id)}><Text>Reject</Text></Pressable>
+                        <Pressable style={styles.accept} onPress={() => onAccept(r.id)}><Text style={{ color: '#fff', fontWeight: '700' }}>Accept</Text></Pressable>
                     </View>
                 </View>
             ))}
-        </View>
+            {!loading && !rows.length && <Text style={{ marginTop: 10, color: '#6B7280' }}>No hay solicitudes</Text>}
+        </ScrollView>
     );
 }
 

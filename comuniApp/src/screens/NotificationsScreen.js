@@ -1,10 +1,70 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, ScrollView, RefreshControl } from 'react-native';
+import {
+    approveGroupJoinRequest, rejectGroupJoinRequest,
+    approveEvent, rejectEvent,
+    approveGroup, rejectGroup,
+    listAdminNotifications
+} from '../data/requests.supabase';
 
-export default function NotificationsScreen({ route }) {
-    const variant = route?.params?.variant || 'empty'; // 'empty' | 'list'
+function timeago(d) {
+    if (!d) return '';
+    const sec = Math.floor((Date.now() - d.getTime()) / 1000);
+    if (sec < 60) return 'Just now';
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `${min} min ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr} h ago`;
+    const dd = Math.floor(hr / 24);
+    return `${dd} d ago`;
+}
 
-    if (variant === 'empty') {
+export default function NotificationsScreen() {
+    const [loading, setLoading] = useState(true);
+    const [feed, setFeed] = useState([]);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        try {
+            const rows = await listAdminNotifications();
+            setFeed(rows);
+        } catch (e) { Alert.alert('Error', e.message); }
+        finally { setLoading(false); }
+    }, []);
+
+    useEffect(() => { load(); }, [load]);
+
+    const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
+
+    const onAccept = async (item) => {
+        try {
+            if (item.type === 'JOIN') await approveGroupJoinRequest(item.id);
+            else if (item.type === 'EVENT') await approveEvent(item.id);
+            else if (item.type === 'GROUP') await approveGroup(item.id);
+            await load();
+        } catch (e) { Alert.alert('Error', e.message); }
+    };
+
+    const onReject = async (item) => {
+        try {
+            if (item.type === 'JOIN') await rejectGroupJoinRequest(item.id);
+            else if (item.type === 'EVENT') await rejectEvent(item.id);
+            else if (item.type === 'GROUP') await rejectGroup(item.id);
+            await load();
+        } catch (e) { Alert.alert('Error', e.message); }
+    };
+
+    if (loading) {
+        return (
+            <View style={styles.center}>
+                <ActivityIndicator />
+                <Text style={{ marginTop: 8, color: '#6B7280' }}>Cargando...</Text>
+            </View>
+        );
+    }
+
+    if (!feed.length) {
         return (
             <View style={styles.center}>
                 <View style={styles.bell}><Text style={{ fontSize: 36 }}>🔔</Text></View>
@@ -14,19 +74,42 @@ export default function NotificationsScreen({ route }) {
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#fff', padding: 16 }}>
-            {[{ time: 'Just now' }, { time: '20 min ago' }].map((n, i) => (
-                <View key={i} style={styles.item}>
+        <ScrollView style={{ flex: 1, backgroundColor: '#fff' }} contentContainerStyle={{ padding: 16 }}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+            {feed.map((n) => (
+                <View key={`${n.type}_${n.id}`} style={styles.item}>
                     <View style={{ flex: 1 }}>
-                        <Text style={{ color: '#9CA3AF' }}>{n.time}</Text>
+                        {n.type === 'JOIN' && (
+                            <>
+                                <Text style={styles.title}>{n.requesterName}</Text>
+                                <Text style={styles.sub}>Solicita acceso a {n.groupName}</Text>
+                            </>
+                        )}
+
+                        {n.type === 'EVENT' && (
+                            <>
+                                <Text style={styles.title}>{n.title}</Text>
+                                <Text style={styles.sub}>Evento propuesto en {n.groupName}</Text>
+                            </>
+                        )}
+
+                        {n.type === 'GROUP' && (
+                            <>
+                                <Text style={styles.title}>{n.name}</Text>
+                                <Text style={styles.sub}>Grupo pendiente de aprobación</Text>
+                            </>
+                        )}
+
+                        <Text style={styles.time}>{timeago(n.time)}</Text>
                     </View>
+
                     <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <Pressable style={styles.reject}><Text style={{ color: '#374151' }}>Reject</Text></Pressable>
-                        <Pressable style={styles.accept}><Text style={{ color: '#fff', fontWeight: '700' }}>Accept</Text></Pressable>
+                        <Pressable style={styles.reject} onPress={() => onReject(n)}><Text style={{ color: '#374151' }}>Reject</Text></Pressable>
+                        <Pressable style={styles.accept} onPress={() => onAccept(n)}><Text style={{ color: '#fff', fontWeight: '700' }}>Accept</Text></Pressable>
                     </View>
                 </View>
             ))}
-        </View>
+        </ScrollView>
     );
 }
 
@@ -35,6 +118,9 @@ const styles = StyleSheet.create({
     bell: { width: 140, height: 140, borderRadius: 70, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     emptyTitle: { fontSize: 18, fontWeight: '800', color: '#173049' },
     item: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 18, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+    title: { fontWeight: '700', color: '#173049' },
+    sub: { color: '#6B7280', marginTop: 2, maxWidth: 240 },
+    time: { color: '#9CA3AF', marginTop: 2 },
     reject: { borderWidth: 1, borderColor: '#E5E7EB', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 10 },
     accept: { backgroundColor: '#4F59F5', paddingVertical: 10, paddingHorizontal: 18, borderRadius: 10 },
 });
