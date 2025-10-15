@@ -7,7 +7,6 @@ import SplashScreen from '../screens/SplashScreen';
 import SelectGroupScreen from '../screens/SelectGroupScreen';
 
 import ExploreScreen from '../screens/ExploreScreen';
-import EventsScreen from '../screens/EventsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import EventDetailsScreen from '../screens/EventDetailsScreen';
 
@@ -42,13 +41,6 @@ function MainTabs({ route }) {
                 initialParams={{ groupId, groupName }}
                 options={{
                     tabBarIcon: ({ color, size }) => <Ionicons name="compass-outline" size={size} color={color} />,
-                }}
-            />
-            <Tabs.Screen
-                name="Events"
-                component={EventsScreen}
-                options={{
-                    tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
                 }}
             />
             <Tabs.Screen

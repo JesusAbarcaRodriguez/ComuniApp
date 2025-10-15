@@ -157,66 +157,65 @@ export async function listAdminNotifications() {
     const adminGroupIds = await myAdminGroupIds();
     if (!adminGroupIds.length) return [];
 
-    // 1) JOIN requests (sin joins)
-    const { data: gjr, error: gjrErr } = await supabase
+    // 1) JOIN requests
+    const gjrRes = await supabase
         .from('group_join_requests')
-        .select('id, group_id, user_id, status, created_at')
-        .in('group_id', adminGroupIds)
+        .select('id, group_id, user_id, created_at')
         .eq('status', 'PENDING')
+        .in('group_id', adminGroupIds)
         .order('created_at', { ascending: false });
-    if (gjrErr) throw gjrErr;
 
-    // 2) EVENTS PENDING (sin joins)
-    const { data: evs, error: evErr } = await supabase
+    if (gjrRes.error) throw gjrRes.error;
+    const gjr = gjrRes.data || [];
+
+    // 2) Eventos PENDING
+    const evRes = await supabase
         .from('events')
-        .select('id, group_id, title, status, created_at, start_at')
-        .in('group_id', adminGroupIds)
+        .select('id, group_id, title, created_at')
         .eq('status', 'PENDING')
+        .in('group_id', adminGroupIds)
         .order('created_at', { ascending: false });
-    if (evErr) throw evErr;
 
-    // 3) Diccionarios para nombres
-    const groupIds = [
-        ...new Set([
-            ...gjr.map(r => r.group_id),
-            ...evs.map(e => e.group_id),
-        ])
-    ];
+    if (evRes.error) throw evRes.error;
+    const evs = evRes.data || [];
+
+    // 3) Diccionarios para nombres (grupos y perfiles de solicitantes)
+    const groupIds = [...new Set([...gjr.map(r => r.group_id), ...evs.map(e => e.group_id)])];
     const userIds = [...new Set(gjr.map(r => r.user_id))];
 
-    const { data: groups, error: gErr } = await supabase
-        .from('groups')
-        .select('id, name')
-        .in('id', groupIds);
-    if (gErr) throw gErr;
-    const gmap = new Map((groups || []).map(g => [g.id, g.name]));
+    const [groupsRes, profsRes] = await Promise.all([
+        groupIds.length
+            ? supabase.from('groups').select('id, name').in('id', groupIds)
+            : { data: [], error: null },
+        userIds.length
+            ? supabase.from('profiles').select('id, display_name').in('id', userIds)
+            : { data: [], error: null },
+    ]);
+    if (groupsRes.error) throw groupsRes.error;
+    if (profsRes.error) throw profsRes.error;
 
-    const { data: profs, error: pErr } = userIds.length
-        ? await supabase.from('profiles').select('id, display_name').in('id', userIds)
-        : { data: [], error: null };
-    if (pErr) throw pErr;
-    const pmap = new Map((profs || []).map(p => [p.id, p.display_name]));
+    const gmap = new Map((groupsRes.data || []).map(g => [g.id, g.name]));
+    const pmap = new Map((profsRes.data || []).map(p => [p.id, p.display_name || '']));
 
-    // 4) Mapear a items con type DEFINIDO
-    const joinItems = (gjr || []).map(r => ({
-        id: r.id,                  // id de group_join_requests
-        type: 'JOIN',              // <-- clave para tu switch
+    // 4) Normaliza a feed
+    const joinItems = gjr.map(r => ({
+        id: r.id,
+        type: 'JOIN',
         groupId: r.group_id,
         groupName: gmap.get(r.group_id) || 'Grupo',
-        userId: r.user_id,
-        requesterName: pmap.get(r.user_id) || r.user_id?.slice(0, 8) || 'Usuario',
+        requesterId: r.user_id,
+        requesterName: pmap.get(r.user_id) || r.user_id.slice(0, 8),
         time: new Date(r.created_at),
     }));
 
-    const eventItems = (evs || []).map(e => ({
-        id: e.id,                  // id del evento
-        type: 'EVENT',             // <-- clave para tu switch
+    const eventItems = evs.map(e => ({
+        id: e.id,
+        type: 'EVENT',
         groupId: e.group_id,
         groupName: gmap.get(e.group_id) || 'Grupo',
         title: e.title,
-        time: new Date(e.created_at || e.start_at || Date.now()),
+        time: new Date(e.created_at),
     }));
 
-    // 5) Unir y ordenar
     return [...joinItems, ...eventItems].sort((a, b) => b.time - a.time);
 }
