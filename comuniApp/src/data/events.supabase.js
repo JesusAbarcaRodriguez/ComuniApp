@@ -9,7 +9,7 @@ function toLocalISO(dateStr, timeStr) {
 }
 
 export async function createEvent({
-    groupId, title, description, startDate, startTime, endDate, endTime, locationName, status = 'PENDING'
+    groupId, title, description, startDate, startTime, endDate, endTime, locationName, status
 }) {
     const { data: authData, error: authErr } = await supabase.auth.getUser();
     if (authErr || !authData?.user) throw new Error('No auth user');
@@ -59,17 +59,22 @@ export async function createEvent({
 }
 
 export async function listUpcomingEventsByGroup(groupId) {
+    // desde el inicio de HOY (zona local)
+    const now = new Date();
+    const startOfTodayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     const { data, error } = await supabase
         .from('events')
         .select('id, title, start_at, location_name, status')
         .eq('group_id', groupId)
-        .in('status', ['APPROVED'])
-        .gte('start_at', new Date().toISOString())
+        .eq('status', 'APPROVED')
+        .gte('start_at', startOfTodayLocal.toISOString()) // 👈 incluye todo lo de hoy
         .order('start_at', { ascending: true });
 
     if (error) throw error;
     return data || [];
 }
+
 
 export async function getEventById(eventId) {
     const { data: event, error } = await supabase
