@@ -1,6 +1,6 @@
 // src/screens/auth/SignInScreen.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, Image, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
 import PrimaryButton from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthProvider';
@@ -43,8 +43,11 @@ export default function SignInScreen({ navigation }) {
     return (
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
             <View style={styles.container}>
-                <View style={styles.logoWrap}><Text style={{ fontSize: 42 }}>📅</Text></View>
-                <Text style={styles.title}>ComuniApp</Text>
+                <Image
+                    source={require('../../assets/comuniapp.png')}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                />
 
                 <View style={{ gap: 12, width: '100%' }}>
                     {/* Email */}
@@ -101,9 +104,36 @@ export default function SignInScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff', padding: 24, justifyContent: 'center' },
-    logoWrap: { alignSelf: 'center', width: 80, height: 80, borderRadius: 16, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-    title: { textAlign: 'center', fontSize: 22, fontWeight: '800', color: '#173049', marginBottom: 22 },
-    inputWrap: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 12, height: 50, gap: 10 },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+        padding: 24,
+        justifyContent: 'center',   // centra verticalmente
+        alignItems: 'center',       // centra horizontalmente ✅
+    },
+    title: {
+        textAlign: 'center',
+        fontSize: 22,
+        fontWeight: '800',
+        color: '#173049',
+        marginBottom: 22
+    },
+    inputWrap: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 50,
+        gap: 10,
+        width: '100%',              // aseguramos que los inputs sigan tomando todo el ancho
+    },
     input: { flex: 1 },
+    logoImage: {
+        width: 140,
+        height: 140,
+        marginBottom: 20,
+    },
 });
+

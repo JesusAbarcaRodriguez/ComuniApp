@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 
 export default function SplashScreen({ navigation }) {
     useEffect(() => {
@@ -9,15 +9,32 @@ export default function SplashScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <View style={styles.logoCircle}><Text style={styles.logoEmoji}>📅</Text></View>
+            {/* Imagen del logo */}
+            <Image
+                source={require('../assets/comuniapp.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+            />
             <Text style={styles.appName}>ComuniApp</Text>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff' },
-    logoCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: '#E9ECFF', alignItems: 'center', justifyContent: 'center' },
-    logoEmoji: { fontSize: 44 },
-    appName: { marginTop: 12, fontSize: 22, fontWeight: '700', color: '#173049' },
+    container: {
+        flex: 1,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    logoImage: {
+        width: 120, // ajusta según el tamaño que quieras
+        height: 120,
+        marginBottom: 20,
+    },
+    appName: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#173049',
+    },
 });

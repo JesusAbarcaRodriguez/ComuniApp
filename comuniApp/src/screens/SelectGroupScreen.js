@@ -83,7 +83,6 @@ export default function SelectGroupScreen({ navigation }) {
     const renderItem = ({ item }) => {
         const role = membershipMap.get(item.id);
         const pending = isPending(item.id);
-        console.log('GROUPS:', filtered.length, filtered.map(g => ({ id: g.id, name: g.name, privacy: g.privacy, status: g.status })));
 
         return (
             <View style={styles.item}>

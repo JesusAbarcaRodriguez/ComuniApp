@@ -62,7 +62,6 @@ export async function listGroupJoinRequestsForAdmin() {
 
 export async function approveGroupJoinRequest(requestId) {
     // lee solicitud
-    console.log("llega1")
     const { data: req, error: rErr } = await supabase
         .from('group_join_requests')
         .select('id, group_id, user_id, status')
@@ -70,14 +69,12 @@ export async function approveGroupJoinRequest(requestId) {
         .single();
     if (rErr) throw rErr;
     if (!req) throw new Error('Solicitud no encontrada');
-    console.log("llega2");
     // marca como aprobada
     const { error: uErr } = await supabase
         .from('group_join_requests')
         .update({ status: 'APPROVED', decided_at: new Date().toISOString() })
         .eq('id', requestId);
     if (uErr) throw uErr;
-    console.log("llega3")
     // inserta miembro (ignora duplicado)
     const { error: mErr } = await supabase
         .from('group_members')
