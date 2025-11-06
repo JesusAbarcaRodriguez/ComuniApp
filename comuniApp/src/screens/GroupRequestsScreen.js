@@ -35,8 +35,8 @@ export default function GroupRequestsScreen() {
                         <Text style={styles.time}>{r.time?.toLocaleString?.() || ''}</Text>
                     </View>
                     <View style={styles.actions}>
-                        <Pressable style={styles.reject} onPress={() => onReject(r.id)}><Text>Reject</Text></Pressable>
-                        <Pressable style={styles.accept} onPress={() => onAccept(r.id)}><Text style={{ color: '#fff', fontWeight: '700' }}>Accept</Text></Pressable>
+                        <Pressable style={styles.reject} onPress={() => onReject(r.id)}><Text>Rechazar</Text></Pressable>
+                        <Pressable style={styles.accept} onPress={() => onAccept(r.id)}><Text style={{ color: '#fff', fontWeight: '700' }}>Aceptar</Text></Pressable>
                     </View>
                 </View>
             ))}

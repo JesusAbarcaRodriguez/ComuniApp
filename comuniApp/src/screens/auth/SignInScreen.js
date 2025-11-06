@@ -67,7 +67,7 @@ export default function SignInScreen({ navigation }) {
                     <View style={styles.inputWrap}>
                         <FontAwesome name="lock" size={20} color="#9CA3AF" />
                         <TextInput
-                            placeholder="Your password"
+                            placeholder="Tu contraseña"
                             style={styles.input}
                             secureTextEntry={hidden}
                             value={password}
@@ -81,22 +81,22 @@ export default function SignInScreen({ navigation }) {
 
                 <View style={{ marginTop: 12, alignSelf: 'flex-end' }}>
                     <Pressable onPress={() => navigation.navigate('Forgot')}>
-                        <Text style={{ color: '#6B7280' }}>Forgot Password?</Text>
+                        <Text style={{ color: '#6B7280' }}>¿Olvidaste tu contraseña?</Text>
                     </Pressable>
                 </View>
 
-                <PrimaryButton title={loading ? 'SIGNING IN...' : 'SIGN IN'} onPress={handleSignIn} disabled={loading} />
+                <PrimaryButton title={loading ? 'INICIANDO SESIÓN...' : 'INICIAR SESIÓN'} onPress={handleSignIn} disabled={loading} />
 
                 <View style={{ alignItems: 'center', marginTop: 20 }}>
                     <Pressable onPress={() => navigation.navigate('SignUp')}>
                         <Text>
-                            Don’t have an account? <Text style={{ color: '#4F59F5', fontWeight: '700' }}>Sign up</Text>
+                            ¿No tienes cuenta? <Text style={{ color: '#4F59F5', fontWeight: '700' }}>Regístrate</Text>
                         </Text>
                     </Pressable>
                 </View>
 
                 <Text style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
-                    ¿No te llegó el correo? Revisa SPAM o solicita otro desde “Forgot Password”.
+                    ¿No te llegó el correo? Revisa SPAM o solicita otro desde "Recuperar contraseña".
                 </Text>
             </View>
         </KeyboardAvoidingView>

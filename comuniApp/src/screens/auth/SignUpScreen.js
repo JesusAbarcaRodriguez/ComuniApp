@@ -1,6 +1,6 @@
 // src/screens/auth/SignUpScreen.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useAuth } from '../../context/AuthProvider';
 
 export default function SignUpScreen({ navigation }) {
@@ -32,8 +32,15 @@ export default function SignUpScreen({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.h1}>Create account</Text>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+        >
+            <ScrollView
+                contentContainerStyle={styles.container}
+                keyboardShouldPersistTaps="handled"
+            >
+                <Text style={styles.h1}>Crear cuenta</Text>
 
             <TextInput
                 placeholder="Tu nombre"
@@ -51,7 +58,7 @@ export default function SignUpScreen({ navigation }) {
             />
 
             <TextInput
-                placeholder="Password"
+                placeholder="Contraseña"
                 secureTextEntry
                 style={styles.input}
                 value={password}
@@ -59,18 +66,19 @@ export default function SignUpScreen({ navigation }) {
             />
 
             <Pressable style={styles.primary} onPress={onSubmit} disabled={loading}>
-                <Text style={styles.primaryText}>{loading ? 'Creating...' : 'Sign Up'}</Text>
+                <Text style={styles.primaryText}>{loading ? 'Creando...' : 'Registrarse'}</Text>
             </Pressable>
 
             <Text style={{ color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
                 Se enviará un correo de confirmación a {email || 'tu correo'}.
             </Text>
-        </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 20, justifyContent: 'center', backgroundColor: '#fff' },
+    container: { flexGrow: 1, padding: 20, justifyContent: 'center', backgroundColor: '#fff' },
     h1: { fontSize: 24, fontWeight: '800', marginBottom: 14, color: '#111827' },
     input: { height: 48, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
     primary: { backgroundColor: '#4F59F5', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 6 },

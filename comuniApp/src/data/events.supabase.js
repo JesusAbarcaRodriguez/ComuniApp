@@ -149,3 +149,99 @@ export async function joinEvent(eventId) {
 
     return { pending: true };
 }
+
+/** Verifica si el usuario actual es admin/owner del grupo del evento */
+export async function isEventAdmin(eventId) {
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) return false;
+
+    // Obtener el grupo del evento
+    const { data: event, error: evErr } = await supabase
+        .from('events')
+        .select('group_id')
+        .eq('id', eventId)
+        .single();
+    if (evErr || !event) return false;
+
+    // Verificar si es owner del grupo
+    const { data: group, error: gErr } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', event.group_id)
+        .single();
+    if (!gErr && group?.owner_id === user.id) return true;
+
+    // Verificar si es ADMIN o OWNER en group_members
+    const { data: member, error: mErr } = await supabase
+        .from('group_members')
+        .select('role')
+        .eq('group_id', event.group_id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    return !mErr && member && ['OWNER', 'ADMIN'].includes(member.role);
+}
+
+/** Lista solicitudes de asistencia pendientes para un evento */
+export async function listEventAttendanceRequests(eventId) {
+    // Traer solicitudes pendientes
+    const { data: requests, error } = await supabase
+        .from('event_attendees')
+        .select('user_id')
+        .eq('event_id', eventId)
+        .eq('status', 'PENDING');
+
+    if (error) throw error;
+    if (!requests?.length) return [];
+
+    // Traer nombres desde profiles
+    const userIds = requests.map(r => r.user_id);
+    const { data: profiles, error: pErr } = await supabase
+        .from('profiles')
+        .select('id, display_name')
+        .in('id', userIds);
+    if (pErr) throw pErr;
+
+    const pmap = new Map((profiles || []).map(p => [p.id, p.display_name || '']));
+
+    return requests.map(r => ({
+        userId: r.user_id,
+        userName: pmap.get(r.user_id) || r.user_id.slice(0, 8),
+    }));
+}
+
+/** Aprueba una solicitud de asistencia */
+export async function approveAttendanceRequest(eventId, userId) {
+    const { error } = await supabase
+        .from('event_attendees')
+        .update({ status: 'GOING', updated_at: new Date().toISOString() })
+        .eq('event_id', eventId)
+        .eq('user_id', userId);
+
+    if (error) throw error;
+    return true;
+}
+
+/** Rechaza una solicitud de asistencia */
+export async function rejectAttendanceRequest(eventId, userId) {
+    const { error } = await supabase
+        .from('event_attendees')
+        .update({ status: 'REJECTED', updated_at: new Date().toISOString() })
+        .eq('event_id', eventId)
+        .eq('user_id', userId);
+
+    if (error) throw error;
+    return true;
+}
+
+/** Cuenta solicitudes de asistencia pendientes para un evento */
+export async function getPendingAttendanceCount(eventId) {
+    const { count, error } = await supabase
+        .from('event_attendees')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', eventId)
+        .eq('status', 'PENDING');
+
+    if (error) throw error;
+    return count ?? 0;
+}

@@ -1,23 +1,14 @@
 // src/screens/ExploreScreen.js
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Modal, TextInput, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl, Modal, TextInput, Alert, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../components/PrimaryButton';
+import AnimatedEventCard from '../components/AnimatedEventCard';
 import { getSelectedGroup, getGroupName, createGroup, setSelectedGroup } from '../data/groups.supabase';
 import { listUpcomingEventsByGroup } from '../data/events.supabase';
 
-function fmtDate(iso) {
-    try {
-        const d = new Date(iso);
-        const day = String(d.getDate()).padStart(2, '0');
-        const mon = d.toLocaleString(undefined, { month: 'long' });
-        const time = d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-        return `${day} ${mon} · ${time}`;
-    } catch { return iso; }
-}
-
 export default function ExploreScreen({ navigation, route }) {
-    const [headerTitle, setHeaderTitle] = useState('Explore');
+    const [headerTitle, setHeaderTitle] = useState('Explorar');
     const [groupId, setGroupId] = useState(null);
     const [events, setEvents] = useState([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -28,11 +19,52 @@ export default function ExploreScreen({ navigation, route }) {
     const [gDesc, setGDesc] = useState('');
     const [creating, setCreating] = useState(false);
 
+    // Animación del FAB
+    const fabScale = useRef(new Animated.Value(0)).current;
+    const fabOpacity = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        // Animar FAB después de que carguen los eventos
+        if (groupId && events.length > 0) {
+            const delay = events.length * 100 + 100;
+            Animated.parallel([
+                Animated.timing(fabOpacity, {
+                    toValue: 1,
+                    delay: delay,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(fabScale, {
+                    toValue: 1,
+                    delay: delay,
+                    tension: 50,
+                    friction: 5,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        } else if (groupId) {
+            // Si hay grupo pero sin eventos, animar inmediatamente
+            Animated.parallel([
+                Animated.timing(fabOpacity, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(fabScale, {
+                    toValue: 1,
+                    tension: 50,
+                    friction: 5,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        }
+    }, [events, groupId]);
+
     const load = useCallback(async (gidParam) => {
         const gid = gidParam || route?.params?.groupId || (await getSelectedGroup());
         setGroupId(gid || null);
         const name = gid ? await getGroupName(gid) : null;
-        setHeaderTitle(name || 'Explore');
+        setHeaderTitle(name || 'Explorar');
 
         if (!gid) { setEvents([]); return; }
         const rows = await listUpcomingEventsByGroup(gid);
@@ -103,25 +135,22 @@ export default function ExploreScreen({ navigation, route }) {
                 contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
-                <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                <Text style={styles.sectionTitle}>Próximos Eventos</Text>
 
-                {/* Lista real de eventos */}
-                {groupId && events.map(ev => (
-                    <Pressable key={ev.id} style={styles.card} onPress={() => navigation.navigate('EventDetails', { eventId: ev.id })}>
-                        <View style={[styles.cardThumb, { width: 14, borderRadius: 4 }]} />
-                        <View style={{ padding: 12, flex: 1 }}>
-                            <Text style={{ fontWeight: '800', fontSize: 16, color: '#173049' }}>{ev.title}</Text>
-                            <Text style={{ color: '#6B7280', marginTop: 4 }}>{fmtDate(ev.start_at)}</Text>
-                            {ev.location_name ? <Text style={{ color: '#6B7280', marginTop: 2 }}>{ev.location_name}</Text> : null}
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color="#9CA3AF" style={{ alignSelf: 'center', marginRight: 10 }} />
-                    </Pressable>
+                {/* Lista real de eventos con animaciones */}
+                {groupId && events.map((ev, index) => (
+                    <AnimatedEventCard
+                        key={ev.id}
+                        event={ev}
+                        index={index}
+                        onPress={() => navigation.navigate('EventDetails', { eventId: ev.id })}
+                    />
                 ))}
 
                 {/* Empty state si no hay eventos */}
                 {groupId && events.length === 0 && (
                     <View style={styles.empty}>
-                        <Text style={{ fontWeight: '700', color: '#173049', marginBottom: 6 }}>No Upcoming Event</Text>
+                        <Text style={{ fontWeight: '700', color: '#173049', marginBottom: 6 }}>Sin Eventos Próximos</Text>
                         <Text style={{ color: '#6B7280', textAlign: 'center' }}>
                             Aún no hay eventos para este grupo.
                         </Text>
@@ -129,14 +158,25 @@ export default function ExploreScreen({ navigation, route }) {
                 )}
             </ScrollView>
 
-            {/* FAB Crear Evento */}
-            <Pressable
-                style={[styles.fab, !groupId && { opacity: 0.5 }]}
-                onPress={() => navigation.navigate('CreateEvent', { groupId })}
-                disabled={!groupId}
+            {/* FAB Crear Evento con animación */}
+            <Animated.View
+                style={[
+                    styles.fab,
+                    {
+                        opacity: fabOpacity,
+                        transform: [{ scale: fabScale }],
+                    },
+                    !groupId && { opacity: 0.5 },
+                ]}
             >
-                <Ionicons name="add" size={28} color="#fff" />
-            </Pressable>
+                <Pressable
+                    onPress={() => navigation.navigate('CreateEvent', { groupId })}
+                    disabled={!groupId}
+                    style={styles.fabPressable}
+                >
+                    <Ionicons name="add" size={28} color="#fff" />
+                </Pressable>
+            </Animated.View>
 
             {/* MODAL CREAR GRUPO */}
             <Modal visible={showCreate} animationType="slide" transparent>
@@ -201,16 +241,24 @@ const styles = StyleSheet.create({
         flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB',
     },
     sectionTitle: { marginTop: 18, marginBottom: 8, fontSize: 18, fontWeight: '800', color: '#173049' },
-    card: {
-        backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
-        shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 1,
-        marginBottom: 12, flexDirection: 'row', alignItems: 'stretch'
-    },
-    cardThumb: { backgroundColor: '#DDE3FF', height: '100%' },
     fab: {
-        position: 'absolute', bottom: 24, alignSelf: 'center', backgroundColor: '#4F59F5',
-        width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center',
-        shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10, elevation: 4
+        position: 'absolute',
+        bottom: 24,
+        alignSelf: 'center',
+        backgroundColor: '#4F59F5',
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 4,
+    },
+    fabPressable: {
+        width: '100%',
+        height: '100%',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     empty: { marginTop: 16, alignItems: 'center', padding: 16, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12 },
 

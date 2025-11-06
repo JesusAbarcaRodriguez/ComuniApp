@@ -1,6 +1,6 @@
 // src/screens/CreateGroupScreen.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
 import { createGroup, setSelectedGroup } from '../data/groups.supabase';
 
@@ -31,37 +31,46 @@ export default function CreateGroupScreen({ navigation }) {
     };
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Crear grupo</Text>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+        >
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+            >
+                <Text style={styles.title}>Crear grupo</Text>
 
-            <Text style={styles.label}>Nombre del grupo</Text>
-            <TextInput
-                value={name}
-                onChangeText={setName}
-                placeholder="Ej. Vecinos de San Luis"
-                style={styles.input}
-                autoCapitalize="words"
-                autoCorrect={false}
-            />
+                <Text style={styles.label}>Nombre del grupo</Text>
+                <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder="Ej. Vecinos de San Luis"
+                    style={styles.input}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                />
 
-            <Text style={styles.label}>Descripción</Text>
-            <TextInput
-                value={desc}
-                onChangeText={setDesc}
-                placeholder="¿De qué trata el grupo?"
-                style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-                multiline
-            />
+                <Text style={styles.label}>Descripción</Text>
+                <TextInput
+                    value={desc}
+                    onChangeText={setDesc}
+                    placeholder="¿De qué trata el grupo?"
+                    style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+                    multiline
+                />
 
-            <View style={{ marginTop: 16 }}>
-                <PrimaryButton title={loading ? 'Creando...' : 'Crear'} onPress={onCreate} icon="checkmark" disabled={loading} />
-            </View>
-        </View>
+                <View style={{ marginTop: 16 }}>
+                    <PrimaryButton title={loading ? 'Creando...' : 'Crear'} onPress={onCreate} icon="checkmark" disabled={loading} />
+                </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', padding: 16 },
+    scrollContent: { flexGrow: 1, backgroundColor: '#fff', padding: 16 },
     title: { fontSize: 22, fontWeight: '800', color: '#173049', marginBottom: 16 },
     label: { marginTop: 10, marginBottom: 6, color: '#374151', fontWeight: '600' },
     input: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 12, height: 48 },

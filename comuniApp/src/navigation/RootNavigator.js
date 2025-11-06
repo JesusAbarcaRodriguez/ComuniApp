@@ -13,6 +13,7 @@ import EventDetailsScreen from '../screens/EventDetailsScreen';
 import CreateGroupScreen from '../screens/CreateGroupScreen';
 import GroupRequestsScreen from '../screens/GroupRequestsScreen';
 import EventRequestsScreen from '../screens/EventRequestsScreen';
+import EventAttendanceRequestsScreen from '../screens/EventAttendanceRequestsScreen';
 import CreateEventScreen from '../screens/CreateEventScreen';
 
 import ProfileScreen from '../screens/ProfileScreen';
@@ -40,6 +41,7 @@ function MainTabs({ route }) {
                 component={ExploreScreen}
                 initialParams={{ groupId, groupName }}
                 options={{
+                    title: 'Explorar',
                     tabBarIcon: ({ color, size }) => <Ionicons name="compass-outline" size={size} color={color} />,
                 }}
             />
@@ -48,7 +50,7 @@ function MainTabs({ route }) {
                 component={NotificationsScreen}
                 initialParams={{ variant: 'list' }}
                 options={{
-                    title: 'Notifications',
+                    title: 'Notificaciones',
                     tabBarIcon: ({ color, size }) => <Ionicons name="notifications-outline" size={size} color={color} />,
                 }}
             />
@@ -56,6 +58,7 @@ function MainTabs({ route }) {
                 name="Profile"
                 component={ProfileScreen}
                 options={{
+                    title: 'Perfil',
                     tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="account-outline" size={size} color={color} />,
                 }}
             />
@@ -69,25 +72,26 @@ export default function RootNavigator() {
         <Stack.Navigator>
             <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
             <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Create account' }} />
-            <Stack.Screen name="Forgot" component={ForgotScreen} options={{ title: 'Reset password' }} />
-            <Stack.Screen name="SelectGroup" component={SelectGroupScreen} options={{ title: 'Select Group' }} />
+            <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Crear cuenta' }} />
+            <Stack.Screen name="Forgot" component={ForgotScreen} options={{ title: 'Recuperar contraseña' }} />
+            <Stack.Screen name="SelectGroup" component={SelectGroupScreen} options={{ title: 'Seleccionar Grupo' }} />
             <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
             <Stack.Screen
                 name="EventDetails"
                 component={EventDetailsScreen}
-                options={{ title: 'Event Details' }}
+                options={{ headerShown: false }}
             />
             <Stack.Screen
                 name="Notifications"
                 component={NotificationsScreen}
-                options={{ title: 'Notification' }}
+                options={{ title: 'Notificaciones' }}
             />
-            <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ title: 'Create Group' }} />
-            <Stack.Screen name="GroupRequests" component={GroupRequestsScreen} options={{ title: 'Group Requests' }} />
-            <Stack.Screen name="EventRequests" component={EventRequestsScreen} options={{ title: 'Event Requests' }} />
-            <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Create Event' }} />
-            <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Edit Profile' }} />
+            <Stack.Screen name="CreateGroup" component={CreateGroupScreen} options={{ title: 'Crear Grupo' }} />
+            <Stack.Screen name="GroupRequests" component={GroupRequestsScreen} options={{ title: 'Solicitudes de Grupo' }} />
+            <Stack.Screen name="EventRequests" component={EventRequestsScreen} options={{ title: 'Solicitudes de Eventos' }} />
+            <Stack.Screen name="EventAttendanceRequests" component={EventAttendanceRequestsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CreateEvent" component={CreateEventScreen} options={{ title: 'Crear Evento' }} />
+            <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: 'Editar Perfil' }} />
         </Stack.Navigator>
     );
 }

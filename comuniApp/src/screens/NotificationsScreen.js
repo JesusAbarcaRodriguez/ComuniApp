@@ -28,13 +28,13 @@ import {
 function timeago(d) {
     if (!d) return '';
     const sec = Math.floor((Date.now() - d.getTime()) / 1000);
-    if (sec < 60) return 'Just now';
+    if (sec < 60) return 'Ahora mismo';
     const min = Math.floor(sec / 60);
-    if (min < 60) return `${min} min ago`;
+    if (min < 60) return `Hace ${min} min`;
     const hr = Math.floor(min / 60);
-    if (hr < 24) return `${hr} h ago`;
+    if (hr < 24) return `Hace ${hr} h`;
     const dd = Math.floor(hr / 24);
-    return `${dd} d ago`;
+    return `Hace ${dd} d`;
 }
 
 export default function NotificationsScreen() {
@@ -121,7 +121,7 @@ export default function NotificationsScreen() {
             <SafeAreaView style={styles.safe}>
                 <View style={styles.center}>
                     <View style={styles.bell}><Text style={{ fontSize: 36 }}>🔔</Text></View>
-                    <Text style={styles.emptyTitle}>No Notifications!</Text>
+                    <Text style={styles.emptyTitle}>¡Sin Notificaciones!</Text>
                 </View>
             </SafeAreaView>
         );
@@ -131,7 +131,7 @@ export default function NotificationsScreen() {
         <SafeAreaView style={styles.safe}>
             {/* Header compacto y seguro en iOS */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Notifications</Text>
+                <Text style={styles.headerTitle}>Notificaciones</Text>
             </View>
 
             <ScrollView
@@ -163,10 +163,10 @@ export default function NotificationsScreen() {
 
                                     <View style={styles.actionsRow}>
                                         <Pressable style={[styles.pillBtn, styles.pillGhost]} onPress={() => onReject(n)}>
-                                            <Text style={styles.pillGhostText}>Reject</Text>
+                                            <Text style={styles.pillGhostText}>Rechazar</Text>
                                         </Pressable>
                                         <Pressable style={[styles.pillBtn, styles.pillPrimary]} onPress={() => onAccept(n)}>
-                                            <Text style={styles.pillPrimaryText}>Accept</Text>
+                                            <Text style={styles.pillPrimaryText}>Aceptar</Text>
                                         </Pressable>
                                     </View>
                                 </View>
@@ -212,9 +212,9 @@ const styles = StyleSheet.create({
 
     // Header compacto (ocupa poco, respeta notch)
     header: {
-        paddingTop: Platform.OS === 'android' ? 8 : 0,
+        paddingTop: Platform.OS === 'android' ? 16 : 12,
         paddingHorizontal: 16,
-        paddingBottom: 8,
+        paddingBottom: 12,
         borderBottomWidth: StyleSheet.hairlineWidth,
         borderBottomColor: '#E5E7EB',
         backgroundColor: '#fff',

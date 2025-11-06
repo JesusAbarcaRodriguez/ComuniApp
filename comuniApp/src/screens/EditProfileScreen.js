@@ -1,6 +1,6 @@
 // src/screens/EditProfileScreen.js
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, Pressable, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthProvider';
@@ -85,8 +85,15 @@ export default function EditProfileScreen({ navigation }) {
     }
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Editar perfil</Text>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+        >
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+            >
+                <Text style={styles.title}>Editar perfil</Text>
 
             {/* Nombre de perfil (profiles.display_name) */}
             <Text style={styles.label}>Nombre de perfil</Text>
@@ -132,12 +139,14 @@ export default function EditProfileScreen({ navigation }) {
             <Text style={{ color: '#9CA3AF', marginTop: 10 }}>
                 Nota: cambiar el correo requiere un flujo de verificación adicional, por eso aquí es de solo lectura.
             </Text>
-        </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff', padding: 16 },
+    scrollContent: { flexGrow: 1, backgroundColor: '#fff', padding: 16 },
     title: { fontSize: 22, fontWeight: '800', color: '#173049', marginBottom: 16 },
     label: { marginTop: 10, marginBottom: 6, color: '#374151', fontWeight: '600' },
     input: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 12, height: 48 },

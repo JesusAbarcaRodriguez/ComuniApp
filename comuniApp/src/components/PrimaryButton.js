@@ -14,7 +14,7 @@ export default function PrimaryButton({ title, onPress, icon = 'arrow-forward' }
 const styles = StyleSheet.create({
     btn: {
         backgroundColor: '#4F59F5',
-        paddingVertical: 16,
+        paddingVertical: 12,
         paddingHorizontal: 18,
         borderRadius: 16,
         flexDirection: 'row',

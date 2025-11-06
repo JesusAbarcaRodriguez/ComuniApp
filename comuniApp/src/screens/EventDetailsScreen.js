@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../components/PrimaryButton';
-import { getEventById, getMyEventStatus, joinEvent } from '../data/events.supabase';
+import { getEventById, getMyEventStatus, joinEvent, isEventAdmin, getPendingAttendanceCount } from '../data/events.supabase';
 
 function fmtDate(iso) {
     try {
@@ -21,6 +21,8 @@ export default function EventDetailsScreen({ route, navigation }) {
     const [userStatus, setUserStatus] = useState(null);
     const [goingCount, setGoingCount] = useState(0);
     const [errorMsg, setErrorMsg] = useState('');
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [pendingCount, setPendingCount] = useState(0);
 
     const whenText = useMemo(() => (event?.start_at ? fmtDate(event.start_at) : ''), [event?.start_at]);
 
@@ -32,6 +34,15 @@ export default function EventDetailsScreen({ route, navigation }) {
             setGoingCount(gc);
             const st = await getMyEventStatus(eventId);
             setUserStatus(st);
+
+            // Verificar si es admin y cargar conteo de solicitudes pendientes
+            const adminStatus = await isEventAdmin(eventId);
+            setIsAdmin(adminStatus);
+
+            if (adminStatus) {
+                const pending = await getPendingAttendanceCount(eventId);
+                setPendingCount(pending);
+            }
         } catch (e) {
             setErrorMsg(e?.message || 'No se pudo cargar el evento');
         } finally {
@@ -68,7 +79,7 @@ export default function EventDetailsScreen({ route, navigation }) {
                 <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
                     <Ionicons name="chevron-back" size={24} color="#fff" />
                 </Pressable>
-                <Text numberOfLines={1} style={styles.headerTitle}>Event Details</Text>
+                <Text numberOfLines={1} style={styles.headerTitle}>Detalles del Evento</Text>
                 <View style={{ width: 24 }} />
             </View>
 
@@ -91,7 +102,7 @@ export default function EventDetailsScreen({ route, navigation }) {
                 <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
                     <Text style={styles.title}>{event.title}</Text>
 
-                    <View style={{ marginTop: 24 }}>
+                    {/* <View style={{ marginTop: 24, marginBottom: 16 }}>
                         {userStatus === 'PENDING' ? (
                             <PrimaryButton title="Solicitud pendiente" disabled />
                         ) : userStatus === 'GOING' ? (
@@ -104,7 +115,7 @@ export default function EventDetailsScreen({ route, navigation }) {
                                 icon="person-add-outline"
                             />
                         )}
-                    </View>
+                    </View> */}
 
                     <View style={styles.row}>
                         <View style={styles.pill}><Text style={styles.pillText}>{event.status}</Text></View>
@@ -125,16 +136,47 @@ export default function EventDetailsScreen({ route, navigation }) {
 
                     {event.description ? (
                         <>
-                            <Text style={styles.sectionTitle}>Description</Text>
+                            <Text style={styles.sectionTitle}>Descripción</Text>
                             <View style={styles.descCard}><Text style={{ color: '#374151' }}>{event.description}</Text></View>
                         </>
                     ) : null}
 
-                    <Text style={styles.sectionTitle}>Attendees</Text>
+                    <Text style={styles.sectionTitle}>Asistentes</Text>
                     <View style={styles.attendeesCard}>
                         <Ionicons name="people-circle-outline" size={20} color="#4F59F5" />
-                        <Text style={{ marginLeft: 8, color: '#173049', fontWeight: '700' }}>{goingCount} going</Text>
+                        <Text style={{ marginLeft: 8, color: '#173049', fontWeight: '700' }}>{goingCount} {goingCount === 1 ? 'asistente' : 'asistentes'}</Text>
                     </View>
+
+                    {isAdmin && pendingCount > 0 && (
+                        <>
+                            <Text style={styles.sectionTitle}>Gestión de Solicitudes</Text>
+                            <Pressable
+                                style={styles.requestsButton}
+                                onPress={() =>
+                                    navigation.navigate('EventAttendanceRequests', {
+                                        eventId: eventId,
+                                        eventTitle: event.title,
+                                    })
+                                }
+                            >
+                                <View style={styles.requestsButtonContent}>
+                                    <View style={styles.requestsIcon}>
+                                        <Ionicons name="person-add" size={20} color="#4F59F5" />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.requestsTitle}>Solicitudes Pendientes</Text>
+                                        <Text style={styles.requestsSubtext}>
+                                            {pendingCount} {pendingCount === 1 ? 'persona' : 'personas'} esperando aprobación
+                                        </Text>
+                                    </View>
+                                    <View style={styles.badge}>
+                                        <Text style={styles.badgeText}>{pendingCount}</Text>
+                                    </View>
+                                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                                </View>
+                            </Pressable>
+                        </>
+                    )}
                 </ScrollView>
             )}
         </View>
@@ -160,4 +202,48 @@ const styles = StyleSheet.create({
     sectionTitle: { marginTop: 18, marginBottom: 8, fontSize: 16, fontWeight: '800', color: '#173049' },
     descCard: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, backgroundColor: '#fff' },
     attendeesCard: { borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, padding: 12, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center' },
+
+    requestsButton: {
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        overflow: 'hidden',
+    },
+    requestsButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 14,
+    },
+    requestsIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#EEF2FF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    requestsTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#173049',
+    },
+    requestsSubtext: {
+        fontSize: 13,
+        color: '#6B7280',
+        marginTop: 2,
+    },
+    badge: {
+        backgroundColor: '#FEE2E2',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        marginRight: 8,
+    },
+    badgeText: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: '#EF4444',
+    },
 });
