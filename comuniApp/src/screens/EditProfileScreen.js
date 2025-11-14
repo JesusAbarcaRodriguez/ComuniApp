@@ -1,6 +1,6 @@
 // src/screens/EditProfileScreen.js
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, Pressable, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, ActivityIndicator, Pressable, KeyboardAvoidingView, ScrollView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthProvider';
@@ -86,13 +86,15 @@ export default function EditProfileScreen({ navigation }) {
 
     return (
         <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: '#fff' }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-            >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.scrollContent}
+                >
                 <Text style={styles.title}>Editar perfil</Text>
 
             {/* Nombre de perfil (profiles.display_name) */}
@@ -121,6 +123,8 @@ export default function EditProfileScreen({ navigation }) {
                     placeholder="••••••••"
                     secureTextEntry={hidden}
                     style={{ flex: 1 }}
+                    returnKeyType="done"
+                    blurOnSubmit
                 />
                 <Pressable onPress={() => setHidden(!hidden)} hitSlop={8}>
                     <Ionicons name={hidden ? 'eye-off' : 'eye'} size={18} color="#9CA3AF" />
@@ -139,7 +143,8 @@ export default function EditProfileScreen({ navigation }) {
             <Text style={{ color: '#9CA3AF', marginTop: 10 }}>
                 Nota: cambiar el correo requiere un flujo de verificación adicional, por eso aquí es de solo lectura.
             </Text>
-            </ScrollView>
+                </ScrollView>
+            </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
     );
 }

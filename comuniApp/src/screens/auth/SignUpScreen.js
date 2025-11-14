@@ -1,6 +1,6 @@
 // src/screens/auth/SignUpScreen.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useAuth } from '../../context/AuthProvider';
 
 export default function SignUpScreen({ navigation }) {
@@ -33,13 +33,15 @@ export default function SignUpScreen({ navigation }) {
 
     return (
         <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: '#fff' }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
-            <ScrollView
-                contentContainerStyle={styles.container}
-                keyboardShouldPersistTaps="handled"
-            >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.container}
+                >
                 <Text style={styles.h1}>Crear cuenta</Text>
 
             <TextInput
@@ -63,6 +65,8 @@ export default function SignUpScreen({ navigation }) {
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
+                returnKeyType="done"
+                blurOnSubmit
             />
 
             <Pressable style={styles.primary} onPress={onSubmit} disabled={loading}>
@@ -72,7 +76,8 @@ export default function SignUpScreen({ navigation }) {
             <Text style={{ color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
                 Se enviará un correo de confirmación a {email || 'tu correo'}.
             </Text>
-            </ScrollView>
+                </ScrollView>
+            </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
     );
 }

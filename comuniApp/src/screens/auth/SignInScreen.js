@@ -1,6 +1,6 @@
 // src/screens/auth/SignInScreen.js
 import React, { useState } from 'react';
-import { View, Text, Image, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, Image, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
 import PrimaryButton from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthProvider';
@@ -41,8 +41,16 @@ export default function SignInScreen({ navigation }) {
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-            <View style={styles.container}>
+        <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: '#fff' }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.container}
+                >
                 <Image
                     source={require('../../assets/comuniapp.png')}
                     style={styles.logoImage}
@@ -98,7 +106,8 @@ export default function SignInScreen({ navigation }) {
                 <Text style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
                     ¿No te llegó el correo? Revisa SPAM o solicita otro desde "Recuperar contraseña".
                 </Text>
-            </View>
+                </ScrollView>
+            </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
     );
 }

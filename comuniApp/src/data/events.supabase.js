@@ -150,6 +150,42 @@ export async function joinEvent(eventId) {
     return { pending: true };
 }
 
+/** Confirma asistencia directamente al evento: inserta en event_attendees con status='GOING' */
+export async function confirmAttendance(eventId) {
+    const { data: authData, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !authData?.user) throw new Error('Usuario no autenticado');
+    const userId = authData.user.id;
+
+    // ¿ya tengo registro?
+    const { data: existing, error: exErr } = await supabase
+        .from('event_attendees')
+        .select('status')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .maybeSingle();
+    if (exErr) throw exErr;
+
+    if (existing) {
+        if (existing.status === 'GOING') throw new Error('Ya confirmaste tu asistencia a este evento.');
+        // Si está PENDING o REJECTED, actualizar a GOING
+        const { error: updErr } = await supabase
+            .from('event_attendees')
+            .update({ status: 'GOING', updated_at: new Date().toISOString() })
+            .eq('event_id', eventId)
+            .eq('user_id', userId);
+        if (updErr) throw updErr;
+        return { confirmed: true };
+    }
+
+    // insertar nueva confirmación directa
+    const { error } = await supabase
+        .from('event_attendees')
+        .insert({ event_id: eventId, user_id: userId, status: 'GOING' });
+    if (error) throw error;
+
+    return { confirmed: true };
+}
+
 /** Verifica si el usuario actual es admin/owner del grupo del evento */
 export async function isEventAdmin(eventId) {
     const { data: { user }, error: aerr } = await supabase.auth.getUser();
@@ -206,7 +242,7 @@ export async function listEventAttendanceRequests(eventId) {
 
     return requests.map(r => ({
         userId: r.user_id,
-        userName: pmap.get(r.user_id) || r.user_id.slice(0, 8),
+        userName: pmap.get(r.user_id) || 'Usuario sin nombre',
     }));
 }
 

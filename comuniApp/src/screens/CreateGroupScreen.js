@@ -1,6 +1,6 @@
 // src/screens/CreateGroupScreen.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import PrimaryButton from '../components/PrimaryButton';
 import { createGroup, setSelectedGroup } from '../data/groups.supabase';
 
@@ -32,13 +32,15 @@ export default function CreateGroupScreen({ navigation }) {
 
     return (
         <KeyboardAvoidingView
+            style={{ flex: 1, backgroundColor: '#fff' }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-            >
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.scrollContent}
+                >
                 <Text style={styles.title}>Crear grupo</Text>
 
                 <Text style={styles.label}>Nombre del grupo</Text>
@@ -58,12 +60,15 @@ export default function CreateGroupScreen({ navigation }) {
                     placeholder="¿De qué trata el grupo?"
                     style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
                     multiline
+                    returnKeyType="done"
+                    blurOnSubmit
                 />
 
                 <View style={{ marginTop: 16 }}>
                     <PrimaryButton title={loading ? 'Creando...' : 'Crear'} onPress={onCreate} icon="checkmark" disabled={loading} />
                 </View>
-            </ScrollView>
+                </ScrollView>
+            </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
     );
 }

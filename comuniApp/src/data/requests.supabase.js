@@ -55,7 +55,7 @@ export async function listGroupJoinRequestsForAdmin() {
         groupId: r.group_id,
         groupName: r.groups?.name || 'Grupo',
         requesterId: r.user_id,
-        requesterName: pmap.get(r.user_id) || r.user_id?.slice(0, 8) || 'Usuario',
+        requesterName: pmap.get(r.user_id) || 'Usuario sin nombre',
         time: new Date(r.created_at),
     }));
 }
@@ -201,7 +201,7 @@ export async function listAdminNotifications() {
         groupId: r.group_id,
         groupName: gmap.get(r.group_id) || 'Grupo',
         requesterId: r.user_id,
-        requesterName: pmap.get(r.user_id) || r.user_id.slice(0, 8),
+        requesterName: pmap.get(r.user_id) || 'Usuario sin nombre',
         time: new Date(r.created_at),
     }));
 

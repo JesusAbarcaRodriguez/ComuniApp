@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../components/PrimaryButton';
-import { getEventById, getMyEventStatus, joinEvent, isEventAdmin, getPendingAttendanceCount } from '../data/events.supabase';
+import { getEventById, getMyEventStatus, joinEvent, confirmAttendance, isEventAdmin, getPendingAttendanceCount } from '../data/events.supabase';
 
 function fmtDate(iso) {
     try {
@@ -59,11 +59,11 @@ export default function EventDetailsScreen({ route, navigation }) {
         load();
     }, [eventId]);
 
-    const handleJoin = async () => {
+    const handleConfirmAttendance = async () => {
         try {
             setJoining(true);
-            await joinEvent(eventId);
-            Alert.alert('Solicitud enviada', 'Tu solicitud para unirte al evento está pendiente de aprobación.');
+            await confirmAttendance(eventId);
+            Alert.alert('¡Confirmado!', 'Tu asistencia al evento ha sido confirmada.');
             await load();
         } catch (e) {
             Alert.alert('Aviso', e.message);
@@ -102,21 +102,6 @@ export default function EventDetailsScreen({ route, navigation }) {
                 <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 24 }}>
                     <Text style={styles.title}>{event.title}</Text>
 
-                    {/* <View style={{ marginTop: 24, marginBottom: 16 }}>
-                        {userStatus === 'PENDING' ? (
-                            <PrimaryButton title="Solicitud pendiente" disabled />
-                        ) : userStatus === 'GOING' ? (
-                            <PrimaryButton title="Ya estás inscrito" disabled />
-                        ) : (
-                            <PrimaryButton
-                                title={joining ? 'Enviando...' : 'Solicitar unirse'}
-                                onPress={handleJoin}
-                                disabled={joining}
-                                icon="person-add-outline"
-                            />
-                        )}
-                    </View> */}
-
                     <View style={styles.row}>
                         <View style={styles.pill}><Text style={styles.pillText}>{event.status}</Text></View>
                         {event.groups?.name ? (
@@ -145,6 +130,23 @@ export default function EventDetailsScreen({ route, navigation }) {
                     <View style={styles.attendeesCard}>
                         <Ionicons name="people-circle-outline" size={20} color="#4F59F5" />
                         <Text style={{ marginLeft: 8, color: '#173049', fontWeight: '700' }}>{goingCount} {goingCount === 1 ? 'asistente' : 'asistentes'}</Text>
+                    </View>
+
+                    <View style={{ marginTop: 16 }}>
+                        {userStatus === 'GOING' ? (
+                            <PrimaryButton
+                                title="Ya confirmaste tu asistencia"
+                                disabled
+                                icon="checkmark-circle-outline"
+                            />
+                        ) : (
+                            <PrimaryButton
+                                title={joining ? 'Confirmando...' : 'Voy a asistir'}
+                                onPress={handleConfirmAttendance}
+                                disabled={joining}
+                                icon="checkmark-circle-outline"
+                            />
+                        )}
                     </View>
 
                     {isAdmin && pendingCount > 0 && (
