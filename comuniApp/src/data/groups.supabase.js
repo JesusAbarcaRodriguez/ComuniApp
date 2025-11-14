@@ -145,3 +145,44 @@ export async function listMyJoinRequestsPending() {
         .filter(r => String(r.status).toUpperCase() === 'PENDING')
         .map(r => r.group_id);
 }
+
+/** Verifica si el usuario actual es owner del grupo */
+export async function isGroupOwner(groupId) {
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) return false;
+
+    const { data: group, error } = await supabase
+        .from('groups')
+        .select('owner_id')
+        .eq('id', groupId)
+        .single();
+
+    if (error) return false;
+    return group?.owner_id === user.id;
+}
+
+/** Elimina un grupo (solo si el usuario es owner) */
+export async function deleteGroup(groupId) {
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) throw new Error('Usuario no autenticado');
+
+    // Verificar que es owner
+    const isOwner = await isGroupOwner(groupId);
+    if (!isOwner) throw new Error('Solo el owner puede eliminar el grupo');
+
+    // Eliminar el grupo (las relaciones se eliminan por CASCADE)
+    const { error } = await supabase
+        .from('groups')
+        .delete()
+        .eq('id', groupId);
+
+    if (error) {
+        console.error('Error al eliminar grupo:', error);
+        // Si es un error de políticas RLS
+        if (error.code === '42501' || error.message.includes('policy')) {
+            throw new Error('Error de permisos en Supabase. Ejecuta el script SQL: supabase_delete_policies.sql');
+        }
+        throw new Error(error.message || 'Error al eliminar el grupo');
+    }
+    return true;
+}

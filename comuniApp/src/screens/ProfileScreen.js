@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthProvider';
 import { supabase } from '../lib/supabase';
+import { isGroupOwner, deleteGroup } from '../data/groups.supabase';
 
 export default function ProfileScreen({ navigation }) {
     const { user, signOut } = useAuth();
@@ -21,6 +22,8 @@ export default function ProfileScreen({ navigation }) {
     const [email, setEmail] = useState(user?.email || '');
     const [avatarUrl, setAvatarUrl] = useState('');
     const [selectedGroupName, setSelectedGroupName] = useState('');
+    const [selectedGroupId, setSelectedGroupId] = useState(null);
+    const [isOwner, setIsOwner] = useState(false);
 
     useEffect(() => {
         let mounted = true;
@@ -39,14 +42,22 @@ export default function ProfileScreen({ navigation }) {
                 setAvatarUrl(prof?.avatar_url || '');
 
                 if (prof?.selected_group_id) {
+                    setSelectedGroupId(prof.selected_group_id);
                     const { data: g, error: gErr } = await supabase
                         .from('groups')
                         .select('name')
                         .eq('id', prof.selected_group_id)
                         .single();
-                    if (!gErr && mounted) setSelectedGroupName(g?.name || '');
+                    if (!gErr && mounted) {
+                        setSelectedGroupName(g?.name || '');
+                        // Verificar si es owner
+                        const ownerStatus = await isGroupOwner(prof.selected_group_id);
+                        setIsOwner(ownerStatus);
+                    }
                 } else {
                     setSelectedGroupName('');
+                    setSelectedGroupId(null);
+                    setIsOwner(false);
                 }
             } catch (e) {
                 if (mounted) Alert.alert('Error', e.message);
@@ -56,6 +67,45 @@ export default function ProfileScreen({ navigation }) {
         })();
         return () => { mounted = false; };
     }, [user?.id]);
+
+    const handleDeleteGroup = () => {
+        if (!selectedGroupId) return;
+
+        Alert.alert(
+            'Eliminar grupo',
+            `¿Estás seguro de que deseas eliminar el grupo "${selectedGroupName}"? Esta acción no se puede deshacer y eliminará todos los eventos asociados.`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteGroup(selectedGroupId);
+                            // Limpiar el grupo seleccionado del perfil
+                            await supabase
+                                .from('profiles')
+                                .update({ selected_group_id: null })
+                                .eq('id', user?.id);
+                            // Mostrar alerta de éxito y redirigir
+                            Alert.alert(
+                                'Eliminado',
+                                'El grupo ha sido eliminado exitosamente.',
+                                [
+                                    {
+                                        text: 'OK',
+                                        onPress: () => navigation.navigate('SelectGroup')
+                                    }
+                                ]
+                            );
+                        } catch (e) {
+                            Alert.alert('Error', e.message);
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const onLogout = () => {
         if (Platform.OS === 'web') {
@@ -127,6 +177,17 @@ export default function ProfileScreen({ navigation }) {
                         <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
                     </Pressable>
                 </View>
+
+                {/* Opciones de owner del grupo */}
+                {isOwner && selectedGroupId && (
+                    <View style={[styles.card, { marginTop: 16 }]}>
+                        <Pressable style={styles.row} onPress={handleDeleteGroup}>
+                            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                            <Text style={[styles.rowText, { color: '#EF4444' }]}>Eliminar mi grupo</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+                        </Pressable>
+                    </View>
+                )}
 
                 {/* Espaciador para que no tape el botón fijo */}
                 <View style={{ height: 80 }} />

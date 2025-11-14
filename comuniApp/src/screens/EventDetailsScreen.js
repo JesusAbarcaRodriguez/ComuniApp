@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import PrimaryButton from '../components/PrimaryButton';
-import { getEventById, getMyEventStatus, joinEvent, confirmAttendance, isEventAdmin, getPendingAttendanceCount } from '../data/events.supabase';
+import { getEventById, getMyEventStatus, joinEvent, confirmAttendance, isEventAdmin, getPendingAttendanceCount, deleteEvent } from '../data/events.supabase';
 
 function fmtDate(iso) {
     try {
@@ -72,6 +72,29 @@ export default function EventDetailsScreen({ route, navigation }) {
         }
     };
 
+    const handleDeleteEvent = () => {
+        Alert.alert(
+            'Eliminar evento',
+            '¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteEvent(eventId);
+                            Alert.alert('Eliminado', 'El evento ha sido eliminado exitosamente.');
+                            navigation.goBack();
+                        } catch (e) {
+                            Alert.alert('Error', e.message);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
     return (
         <View style={{ flex: 1, backgroundColor: '#fff' }}>
             {/* Header */}
@@ -80,7 +103,13 @@ export default function EventDetailsScreen({ route, navigation }) {
                     <Ionicons name="chevron-back" size={24} color="#fff" />
                 </Pressable>
                 <Text numberOfLines={1} style={styles.headerTitle}>Detalles del Evento</Text>
-                <View style={{ width: 24 }} />
+                {isAdmin ? (
+                    <Pressable onPress={handleDeleteEvent} hitSlop={8}>
+                        <Ionicons name="trash-outline" size={24} color="#fff" />
+                    </Pressable>
+                ) : (
+                    <View style={{ width: 24 }} />
+                )}
             </View>
 
             {loading ? (

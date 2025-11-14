@@ -281,3 +281,29 @@ export async function getPendingAttendanceCount(eventId) {
     if (error) throw error;
     return count ?? 0;
 }
+
+/** Elimina un evento (solo si el usuario es owner del grupo) */
+export async function deleteEvent(eventId) {
+    const { data: { user }, error: aerr } = await supabase.auth.getUser();
+    if (aerr || !user) throw new Error('Usuario no autenticado');
+
+    // Verificar que es admin/owner
+    const admin = await isEventAdmin(eventId);
+    if (!admin) throw new Error('No tienes permisos para eliminar este evento');
+
+    // Eliminar el evento (las relaciones en event_attendees se eliminan por CASCADE)
+    const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+    if (error) {
+        console.error('Error al eliminar evento:', error);
+        // Si es un error de políticas RLS
+        if (error.code === '42501' || error.message.includes('policy')) {
+            throw new Error('Error de permisos en Supabase. Ejecuta el script SQL: supabase_delete_policies.sql');
+        }
+        throw new Error(error.message || 'Error al eliminar el evento');
+    }
+    return true;
+}
