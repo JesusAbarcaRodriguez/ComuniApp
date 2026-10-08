@@ -20,6 +20,7 @@
 [Features](#-features) •
 [Tech Stack](#-tech-stack) •
 [Architecture](#-architecture) •
+[Design System](#-frontend-architecture-atomic-design) •
 [Getting Started](#-getting-started) •
 [Project Structure](#-project-structure) •
 [Technical Decisions](#-technical-decisions)
@@ -85,7 +86,7 @@ ComuniApp gives every community one place to publish events, manage members and 
 | --- | --- |
 | 📱 **Mobile** | [React Native](https://reactnative.dev/) 0.81 · [Expo](https://expo.dev/) SDK 54 · React 19 |
 | 🧭 **Navigation** | [React Navigation](https://reactnavigation.org/) 7 (native stack + bottom tabs) |
-| 🎨 **UI** | [@expo/vector-icons](https://icons.expo.fyi/) · custom animated components |
+| 🎨 **UI** | Custom design system (Atomic Design + theme tokens) · [Ionicons](https://icons.expo.fyi/) |
 | ☁️ **Backend** | [Supabase](https://supabase.com/): Auth, auto-generated REST API, Row Level Security |
 | 🗄️ **Database** | PostgreSQL |
 | 💾 **Session storage** | AsyncStorage (native) / localStorage (web) |
@@ -97,8 +98,9 @@ ComuniApp gives every community one place to publish events, manage members and 
 ```mermaid
 flowchart TD
     subgraph App["📱 React Native App (Expo)"]
-        S[Screens] --> C[Components]
-        S --> N[Navigation]
+        N[Navigation] --> S[Screens / Pages]
+        S --> C[Design system<br/>templates · organisms · molecules · atoms]
+        C --> T[Theme tokens]
         S --> A[AuthProvider<br/>Context]
         S --> D[Data layer<br/>*.supabase.js]
         A --> L[Supabase client]
@@ -117,9 +119,11 @@ flowchart TD
     end
 ```
 
-- **Screens** only talk to the **data layer** (`src/data/*.supabase.js`), never to Supabase directly.
+- **Screens** are composed from the **design system** (`src/components`) and fetch data through the **data layer** (`src/data/*.supabase.js`). The profile screens still read the `profiles` table directly.
 - **AuthProvider** exposes the session and auth actions (`signIn`, `signUp`, `resetPassword`, …) through React Context.
 - **Authorization lives in the database**: RLS policies decide who can read, create or delete each row.
+
+> 🧩 The UI layer is built as an **Atomic Design** system. See [Frontend Architecture](#-frontend-architecture-atomic-design) for the full breakdown.
 
 ### 🔔 Notifications with Supabase
 
@@ -139,6 +143,145 @@ How it works:
 
 > [!NOTE]
 > These are in-app notifications. Push notifications (`expo-notifications`) and live updates (Supabase Realtime) are not implemented yet.
+
+---
+
+## 🧩 Frontend Architecture: Atomic Design
+
+The interface is a small in-house design system organized with [Atomic Design](https://atomicdesign.bradfrost.com/chapter-2/). Screens no longer style anything themselves: they **compose components**, and components **read every visual value from theme tokens**.
+
+```mermaid
+flowchart LR
+    T["🎨 Tokens<br/><sub>src/theme</sub>"] --> A["⚛️ Atoms<br/><sub>components/atoms</sub>"]
+    A --> M["🧬 Molecules<br/><sub>components/molecules</sub>"]
+    M --> O["🦠 Organisms<br/><sub>components/organisms</sub>"]
+    O --> TP["📐 Templates<br/><sub>components/templates</sub>"]
+    TP --> P["📱 Pages<br/><sub>src/screens</sub>"]
+```
+
+### Layers
+
+| Level | What lives here | Components |
+| --- | --- | --- |
+| 🎨 **Tokens** | Design decisions as data. The only place with raw values | `colors` · `spacing` · `typography` · `radius` · `shadows` · `sizes` |
+| ⚛️ **Atoms** | Smallest UI pieces. No business logic, no data fetching | `AppText` · `Button` · `IconButton` · `Input` · `Icon` · `Avatar` · `Badge` · `Card` · `Skeleton` |
+| 🧬 **Molecules** | A few atoms with one job | `FormField` · `PasswordField` · `SearchBar` · `InfoRow` · `ListItem` · `SectionHeader` · `SegmentedControl` · `EmptyState` · `ErrorState` |
+| 🦠 **Organisms** | Complete, reusable sections of a screen | `AppHeader` · `EventCard` · `RequestItem` · `NotificationItem` · `GroupListItem` · `ProfileHeader` · `DateTimeField` · `Fab` |
+| 📐 **Templates** | Page skeletons: layout only, no data | `Screen` · `AuthTemplate` |
+| 📱 **Pages** | Screens: load data, handle actions and fill a template | `src/screens/{auth,events,groups,notifications,profile}` |
+
+Cross-cutting UI services live next to the system:
+
+| Folder | Purpose |
+| --- | --- |
+| `src/feedback` | `ToastProvider` / `useToast()` for non-blocking messages and `confirm()` for destructive actions (works on iOS, Android **and web**) |
+| `src/utils` | Shared date formatting (`formatEventLong`, `timeAgo`, …) |
+
+### Dependency rules
+
+```
+pages ──▶ templates ──▶ organisms ──▶ molecules ──▶ atoms ──▶ theme
+```
+
+1. **Imports only point downwards.** An atom never imports a molecule; a molecule never imports an organism.
+2. **No raw style values outside `src/theme`.** Colors, font sizes and spacing always come from tokens.
+3. **Components don't fetch data.** Only pages call `src/data/*`; components receive data and callbacks through props.
+4. **One icon family.** Everything uses Ionicons through the `Icon` atom.
+5. **Pages import from one place:** `import { Screen, Button, EventCard } from '../../components'`.
+
+### Design tokens
+
+<table>
+<tr>
+<td valign="top">
+
+**Color roles**
+
+| Token | Use |
+| --- | --- |
+| `primary` | Brand, primary actions |
+| `primarySoft` | Selected and secondary backgrounds |
+| `textPrimary` | Titles and main text |
+| `textSecondary` | Supporting text |
+| `textMuted` | Placeholders and hints |
+| `border` | Inputs, cards, dividers |
+| `danger` / `success` | Errors / confirmations |
+
+</td>
+<td valign="top">
+
+**Type scale**
+
+| Variant | Size |
+| --- | --- |
+| `display` | 28 |
+| `title` | 22 |
+| `heading` | 18 |
+| `body` | 16 |
+| `label` | 14 |
+| `caption` | 13 |
+
+</td>
+<td valign="top">
+
+**Spacing (4-pt)**
+
+| Token | px |
+| --- | --- |
+| `xs` | 4 |
+| `sm` | 8 |
+| `md` | 12 |
+| `lg` | 16 |
+| `xl` | 24 |
+| `xxl` | 32 |
+
+</td>
+</tr>
+</table>
+
+Components use **semantic roles** (`textSecondary`, `danger`) rather than palette values (`gray500`, `red500`). Switching the palette or adding a dark theme only touches `src/theme/colors.js`.
+
+### Example: a page built from the system
+
+```jsx
+// src/screens/groups/CreateGroupScreen.js (simplified)
+import { Screen, AppText, Button, FormField } from '../../components';
+import { useToast } from '../../feedback';
+
+export default function CreateGroupScreen() {
+    const toast = useToast();
+    // ...state and createGroup() call
+
+    return (
+        <Screen keyboard footer={<Button title="Crear grupo" onPress={onCreate} loading={loading} />}>
+            <AppText tone="secondary">Serás el owner del grupo…</AppText>
+            <FormField label="Nombre del grupo" value={name} onChangeText={setName} error={error} />
+            <FormField label="Descripción (opcional)" multiline value={desc} onChangeText={setDesc} />
+        </Screen>
+    );
+}
+```
+
+The page has **no `StyleSheet` for visuals**. Safe area, keyboard avoidance, scrolling, the sticky footer, input focus and error styles all come from the system.
+
+### UX conventions built in
+
+| Convention | How the system enforces it |
+| --- | --- |
+| ✅ **Inline validation** | `FormField` shows the error under the field and highlights the border |
+| 🔔 **Non-blocking feedback** | `useToast()` for success and errors; `confirm()` only for destructive actions |
+| ⏳ **Loading states** | `Button loading`, plus `Skeleton` / `EventCardSkeleton` shaped like the real content |
+| 🫙 **Empty & error states** | `EmptyState` and `ErrorState` with an optional action |
+| ♿ **Accessibility** | Every `IconButton` gets an `accessibilityLabel`; 44 pt minimum touch targets; roles and live regions on buttons, headers and errors |
+| 📱 **Safe areas** | `Screen`, `AppHeader`, `Fab` and toasts respect notches and home indicators |
+| 🌐 **Cross-platform** | `confirm()` and `DateTimeField` have native and web implementations |
+
+### Adding a component
+
+1. Pick the **lowest level** that fits (prefer an atom or molecule over a new organism).
+2. Create it in `src/components/<level>/` using only tokens from `src/theme` and components from lower levels.
+3. Export it from that level's `index.js`.
+4. Use it from pages through `import { MyComponent } from '../../components'`.
 
 ---
 
@@ -233,24 +376,34 @@ Or scan the QR code with **Expo Go**.
 
 ```
 ComuniApp/
-├── comuniApp/                  # Expo application
+├── comuniApp/                     # Expo application
+│   ├── App.js                     # Providers: SafeArea, Auth, Toast, Navigation theme
 │   ├── src/
-│   │   ├── assets/             # Images and logo
-│   │   ├── components/         # Reusable UI (AnimatedEventCard, PrimaryButton, SegmentedControl)
-│   │   ├── context/            # AuthProvider (session + auth actions)
-│   │   ├── data/               # Data access: events, groups, notifications, requests
-│   │   ├── lib/                # Supabase client
-│   │   ├── navigation/         # RootNavigator
-│   │   └── screens/
-│   │       ├── auth/           # Sign in, sign up, forgot password
-│   │       ├── private/        # Home, profile
-│   │       └── *.js            # Events, groups, requests, notifications, explore
-│   ├── .env.example            # Environment variable template
-│   ├── app.json                # Expo config
+│   │   ├── theme/                 # Design tokens: colors, spacing, typography, radius, shadows
+│   │   ├── components/            # Design system (Atomic Design)
+│   │   │   ├── atoms/             # AppText, Button, IconButton, Input, Icon, Avatar, Badge, Card, Skeleton
+│   │   │   ├── molecules/         # FormField, PasswordField, SearchBar, InfoRow, ListItem, SectionHeader, EmptyState…
+│   │   │   ├── organisms/         # AppHeader, EventCard, RequestItem, NotificationItem, GroupListItem, DateTimeField, Fab…
+│   │   │   └── templates/         # Screen, AuthTemplate (page layouts)
+│   │   ├── screens/               # Pages, grouped by feature
+│   │   │   ├── auth/              # Sign in, sign up, forgot password
+│   │   │   ├── events/            # Explore, details, create, approval and attendance requests
+│   │   │   ├── groups/            # Select, create, join requests
+│   │   │   ├── notifications/
+│   │   │   └── profile/           # Profile, edit profile
+│   │   ├── feedback/              # Toast provider + cross-platform confirm dialog
+│   │   ├── navigation/            # RootNavigator (stack + bottom tabs)
+│   │   ├── context/               # AuthProvider (session + auth actions)
+│   │   ├── data/                  # Data access: events, groups, notifications, requests
+│   │   ├── lib/                   # Supabase client
+│   │   ├── utils/                 # Date formatting helpers
+│   │   └── assets/                # Logo
+│   ├── .env.example               # Environment variable template
+│   ├── app.json                   # Expo config
 │   └── package.json
 ├── supabase/
-│   └── delete_policies.sql     # RLS policies for deleting events and groups
-├── docs/                       # Setup guides and troubleshooting
+│   └── delete_policies.sql        # RLS policies for deleting events and groups
+├── docs/                          # Setup guides and troubleshooting
 └── README.md
 ```
 
@@ -273,6 +426,15 @@ Most community members use their phones. Expo provides a single codebase for iOS
 <br/>
 
 The data is relational: users belong to groups, groups have events, and events have attendees. PostgreSQL models this naturally and supports real SQL queries. Supabase adds built-in auth, an auto-generated REST API and **Row Level Security**, so permission rules live next to the data. It is also open source and has a generous free tier.
+
+</details>
+
+<details open>
+<summary><b>🧩 Atomic Design system instead of per-screen styles</b></summary>
+
+<br/>
+
+Each screen used to define its own colors, sizes and buttons, so the UI drifted: 11 different font sizes, 66 native alerts and duplicated request cards across 4 screens. A token-based Atomic Design system makes consistency the default, keeps screens focused on data and behavior, and lets a visual change (or a future dark mode) happen in one place.
 
 </details>
 
