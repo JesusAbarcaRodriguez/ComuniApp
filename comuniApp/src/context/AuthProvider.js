@@ -65,9 +65,13 @@ export function AuthProvider({ children }) {
         signOut: () => supabase.auth.signOut(),
 
         resetPassword: (email) =>
-            supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: 'https://TU-PROYECTO.supabase.co/auth/v1/callback',
-            }),
+            // sin redirectTo, Supabase usa el Site URL configurado en el dashboard
+            supabase.auth.resetPasswordForEmail(
+                email,
+                process.env.EXPO_PUBLIC_PASSWORD_RESET_REDIRECT_URL
+                    ? { redirectTo: process.env.EXPO_PUBLIC_PASSWORD_RESET_REDIRECT_URL }
+                    : undefined
+            ),
 
         // ⬇️ si no pasas id, lo completamos con el usuario actual
         updateProfile: async (data) => {
