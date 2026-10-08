@@ -6,15 +6,15 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import SplashScreen from '../screens/SplashScreen';
 import SelectGroupScreen from '../screens/groups/SelectGroupScreen';
 
-import ExploreScreen from '../screens/ExploreScreen';
+import ExploreScreen from '../screens/events/ExploreScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
-import EventDetailsScreen from '../screens/EventDetailsScreen';
+import EventDetailsScreen from '../screens/events/EventDetailsScreen';
 
 import CreateGroupScreen from '../screens/groups/CreateGroupScreen';
 import GroupRequestsScreen from '../screens/groups/GroupRequestsScreen';
-import EventRequestsScreen from '../screens/EventRequestsScreen';
-import EventAttendanceRequestsScreen from '../screens/EventAttendanceRequestsScreen';
-import CreateEventScreen from '../screens/CreateEventScreen';
+import EventRequestsScreen from '../screens/events/EventRequestsScreen';
+import EventAttendanceRequestsScreen from '../screens/events/EventAttendanceRequestsScreen';
+import CreateEventScreen from '../screens/events/CreateEventScreen';
 
 import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
