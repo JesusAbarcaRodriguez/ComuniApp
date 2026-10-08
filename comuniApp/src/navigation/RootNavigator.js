@@ -16,8 +16,8 @@ import EventRequestsScreen from '../screens/events/EventRequestsScreen';
 import EventAttendanceRequestsScreen from '../screens/events/EventAttendanceRequestsScreen';
 import CreateEventScreen from '../screens/events/CreateEventScreen';
 
-import ProfileScreen from '../screens/ProfileScreen';
-import EditProfileScreen from '../screens/EditProfileScreen';
+import ProfileScreen from '../screens/profile/ProfileScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
 
 import SignInScreen from '../screens/auth/SignInScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';
