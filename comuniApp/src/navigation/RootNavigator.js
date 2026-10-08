@@ -7,7 +7,7 @@ import SplashScreen from '../screens/SplashScreen';
 import SelectGroupScreen from '../screens/groups/SelectGroupScreen';
 
 import ExploreScreen from '../screens/events/ExploreScreen';
-import NotificationsScreen from '../screens/NotificationsScreen';
+import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import EventDetailsScreen from '../screens/events/EventDetailsScreen';
 
 import CreateGroupScreen from '../screens/groups/CreateGroupScreen';
