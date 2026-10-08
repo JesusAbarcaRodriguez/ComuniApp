@@ -4,14 +4,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 import SplashScreen from '../screens/SplashScreen';
-import SelectGroupScreen from '../screens/SelectGroupScreen';
+import SelectGroupScreen from '../screens/groups/SelectGroupScreen';
 
 import ExploreScreen from '../screens/ExploreScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import EventDetailsScreen from '../screens/EventDetailsScreen';
 
-import CreateGroupScreen from '../screens/CreateGroupScreen';
-import GroupRequestsScreen from '../screens/GroupRequestsScreen';
+import CreateGroupScreen from '../screens/groups/CreateGroupScreen';
+import GroupRequestsScreen from '../screens/groups/GroupRequestsScreen';
 import EventRequestsScreen from '../screens/EventRequestsScreen';
 import EventAttendanceRequestsScreen from '../screens/EventAttendanceRequestsScreen';
 import CreateEventScreen from '../screens/CreateEventScreen';
