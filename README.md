@@ -178,7 +178,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=tu_supabase_anon_key
 Ejecutar el script SQL en Supabase Dashboard > SQL Editor:
 
 ```bash
-# Ver archivo: supabase_delete_policies.sql
+# Ver archivo: supabase/delete_policies.sql
 ```
 
 5. **Iniciar la aplicación**
@@ -218,9 +218,9 @@ Crear las siguientes tablas en SQL Editor:
 
 #### 3. Habilitar políticas RLS
 
-Ejecutar el archivo `supabase_delete_policies.sql` para configurar las políticas de seguridad.
+Ejecutar el archivo `supabase/delete_policies.sql` para configurar las políticas de seguridad.
 
-Ver [INSTRUCCIONES_ELIMINAR.md](./INSTRUCCIONES_ELIMINAR.md) para detalles.
+Ver [docs/eliminar-eventos-y-grupos.md](./docs/eliminar-eventos-y-grupos.md) para detalles.
 
 ---
 
@@ -274,7 +274,7 @@ ComuniApp/
 │   ├── .env                     # Variables de entorno
 │   ├── app.json                 # Configuración de Expo
 │   └── package.json             # Dependencias
-├── supabase_delete_policies.sql # Script SQL para políticas
+├── supabase/delete_policies.sql # Script SQL para políticas
 ├── INSTRUCCIONES_ELIMINAR.md    # Guía de configuración
 └── README.md                    # Este archivo
 ```

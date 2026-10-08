@@ -15,7 +15,7 @@ Los botones de eliminar están implementados pero no funcionan porque **faltan l
 2. Haz clic en el botón **"New query"** o **"+ New query"**
 
 ### Paso 3: Copiar y ejecutar el script
-1. Abre el archivo `supabase_delete_policies.sql` que está en la raíz del proyecto
+1. Abre el archivo `supabase/delete_policies.sql`
 2. Copia **TODO** el contenido del archivo
 3. Pega el contenido en el editor SQL de Supabase
 4. Haz clic en el botón **"Run"** (esquina inferior derecha)
