@@ -1,0 +1,8 @@
+# Claude Code (configuración local)
+.claude/
+
+# macOS
+.DS_Store
+
+# dependencies
+node_modules/
