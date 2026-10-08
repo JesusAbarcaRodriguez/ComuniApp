@@ -220,7 +220,7 @@ Crear las siguientes tablas en SQL Editor:
 
 Ejecutar el archivo `supabase/delete_policies.sql` para configurar las políticas de seguridad.
 
-Ver [docs/eliminar-eventos-y-grupos.md](./docs/eliminar-eventos-y-grupos.md) para detalles.
+Ver [docs/delete-policies.md](./docs/delete-policies.md) para detalles.
 
 ---
 
