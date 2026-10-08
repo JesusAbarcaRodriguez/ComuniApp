@@ -21,7 +21,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 
 import SignInScreen from '../screens/auth/SignInScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';
-import ForgotScreen from '../screens/auth/ForgotScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
 const Stack = createNativeStackNavigator();
 const Tabs = createBottomTabNavigator();
@@ -73,7 +73,7 @@ export default function RootNavigator() {
             <Stack.Screen name="Splash" component={SplashScreen} options={{ headerShown: false }} />
             <Stack.Screen name="SignIn" component={SignInScreen} options={{ headerShown: false }} />
             <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Crear cuenta' }} />
-            <Stack.Screen name="Forgot" component={ForgotScreen} options={{ title: 'Recuperar contraseña' }} />
+            <Stack.Screen name="Forgot" component={ForgotPasswordScreen} options={{ title: 'Recuperar contraseña' }} />
             <Stack.Screen name="SelectGroup" component={SelectGroupScreen} options={{ title: 'Seleccionar Grupo' }} />
             <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
             <Stack.Screen

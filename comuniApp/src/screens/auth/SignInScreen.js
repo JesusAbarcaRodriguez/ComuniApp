@@ -1,148 +1,124 @@
 // src/screens/auth/SignInScreen.js
-import React, { useState } from 'react';
-import { View, Text, Image, TextInput, StyleSheet, Pressable, KeyboardAvoidingView, Platform, Alert, ScrollView, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { Ionicons, AntDesign, FontAwesome } from '@expo/vector-icons';
-import PrimaryButton from '../../components/PrimaryButton';
+import React, { useRef, useState } from 'react';
+import { View, Pressable, StyleSheet } from 'react-native';
+import { AuthTemplate, AppText, Button, FormField, PasswordField } from '../../components';
 import { useAuth } from '../../context/AuthProvider';
+import { colors, radius, spacing } from '../../theme';
 
 function friendlyAuthError(error) {
     const msg = (error?.message || '').toLowerCase();
     if (error?.status === 400 || msg.includes('invalid login credentials'))
-        return 'Correo o contraseña inválidos.';
+        return 'Correo o contraseña incorrectos.';
     if (msg.includes('confirm') || msg.includes('verified') || msg.includes('verificar') || msg.includes('confirmado'))
-        return 'Tu correo aún no está confirmado. Revisa tu bandeja de entrada y completa la verificación.';
+        return 'Tu correo aún no está confirmado. Revisa tu bandeja de entrada.';
+    if (msg.includes('failed to fetch') || msg.includes('network'))
+        return 'No hay conexión con el servidor. Revisa tu internet.';
     return error?.message || 'No se pudo iniciar sesión.';
 }
 
 export default function SignInScreen({ navigation }) {
     const { signIn } = useAuth();
+    const passwordRef = useRef(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [hidden, setHidden] = useState(true);
+    const [errors, setErrors] = useState({});
+    const [formError, setFormError] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSignIn = async () => {
-        if (!email || !password) return Alert.alert('Faltan datos', 'Ingresa email y contraseña');
+        const next = {};
+        if (!email.trim()) next.email = 'Ingresa tu correo.';
+        if (!password) next.password = 'Ingresa tu contraseña.';
+        setErrors(next);
+        setFormError('');
+        if (Object.keys(next).length) return;
 
+        setLoading(true);
         try {
-            setLoading(true);
             const { error } = await signIn(email.trim(), password);
-            setLoading(false);
-
-            if (error) {
-                return Alert.alert('Error', friendlyAuthError(error));
-            }
-
-            navigation.replace('SelectGroup'); // éxito
+            if (error) return setFormError(friendlyAuthError(error));
+            navigation.replace('SelectGroup');
         } catch (e) {
+            setFormError(friendlyAuthError(e));
+        } finally {
             setLoading(false);
-            Alert.alert('Error', e.message);
         }
     };
 
     return (
-        <KeyboardAvoidingView
-            style={{ flex: 1, backgroundColor: '#fff' }}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        <AuthTemplate
+            title="Bienvenido de nuevo"
+            subtitle="Inicia sesión para ver los eventos de tu comunidad"
+            footer={
+                <>
+                    <Pressable onPress={() => navigation.navigate('SignUp')} accessibilityRole="link" hitSlop={8}>
+                        <AppText variant="body" tone="secondary">
+                            ¿No tienes cuenta? <AppText variant="body" tone="brand" weight="700">Regístrate</AppText>
+                        </AppText>
+                    </Pressable>
+                    <AppText variant="caption" tone="muted" align="center">
+                        ¿No te llegó el correo de verificación? Revisa tu carpeta de spam.
+                    </AppText>
+                </>
+            }
         >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                <ScrollView
-                    keyboardShouldPersistTaps="handled"
-                    contentContainerStyle={styles.container}
-                >
-                <Image
-                    source={require('../../assets/comuniapp.png')}
-                    style={styles.logoImage}
-                    resizeMode="contain"
+            <FormField
+                label="Correo electrónico"
+                icon="mail-outline"
+                placeholder="tu@correo.com"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                value={email}
+                onChangeText={(t) => { setEmail(t); if (errors.email) setErrors((e) => ({ ...e, email: undefined })); }}
+                error={errors.email}
+            />
+
+            <View style={styles.passwordBlock}>
+                <PasswordField
+                    ref={passwordRef}
+                    label="Contraseña"
+                    icon="lock-closed-outline"
+                    placeholder="Tu contraseña"
+                    autoComplete="password"
+                    textContentType="password"
+                    returnKeyType="go"
+                    onSubmitEditing={handleSignIn}
+                    value={password}
+                    onChangeText={(t) => { setPassword(t); if (errors.password) setErrors((e) => ({ ...e, password: undefined })); }}
+                    error={errors.password}
                 />
+                <Pressable
+                    onPress={() => navigation.navigate('Forgot')}
+                    accessibilityRole="link"
+                    hitSlop={8}
+                    style={styles.forgot}
+                >
+                    <AppText variant="label" tone="brand">¿Olvidaste tu contraseña?</AppText>
+                </Pressable>
+            </View>
 
-                <View style={{ gap: 12, width: '100%' }}>
-                    {/* Email */}
-                    <View style={styles.inputWrap}>
-                        <AntDesign name="mail" size={18} color="#9CA3AF" />
-                        <TextInput
-                            placeholder="abc@email.com"
-                            style={styles.input}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            value={email}
-                            onChangeText={setEmail}
-                        />
-                    </View>
-
-                    {/* Password */}
-                    <View style={styles.inputWrap}>
-                        <FontAwesome name="lock" size={20} color="#9CA3AF" />
-                        <TextInput
-                            placeholder="Tu contraseña"
-                            style={styles.input}
-                            secureTextEntry={hidden}
-                            value={password}
-                            onChangeText={setPassword}
-                        />
-                        <Pressable onPress={() => setHidden(!hidden)} hitSlop={8}>
-                            <Ionicons name={hidden ? 'eye-off' : 'eye'} size={18} color="#9CA3AF" />
-                        </Pressable>
-                    </View>
+            {formError ? (
+                <View style={styles.formError} accessibilityRole="alert" accessibilityLiveRegion="polite">
+                    <AppText variant="caption" tone="danger">{formError}</AppText>
                 </View>
+            ) : null}
 
-                <View style={{ marginTop: 12, alignSelf: 'flex-end' }}>
-                    <Pressable onPress={() => navigation.navigate('Forgot')}>
-                        <Text style={{ color: '#6B7280' }}>¿Olvidaste tu contraseña?</Text>
-                    </Pressable>
-                </View>
-
-                <PrimaryButton title={loading ? 'INICIANDO SESIÓN...' : 'INICIAR SESIÓN'} onPress={handleSignIn} disabled={loading} />
-
-                <View style={{ alignItems: 'center', marginTop: 20 }}>
-                    <Pressable onPress={() => navigation.navigate('SignUp')}>
-                        <Text>
-                            ¿No tienes cuenta? <Text style={{ color: '#4F59F5', fontWeight: '700' }}>Regístrate</Text>
-                        </Text>
-                    </Pressable>
-                </View>
-
-                <Text style={{ color: '#9CA3AF', textAlign: 'center', marginTop: 12 }}>
-                    ¿No te llegó el correo? Revisa SPAM o solicita otro desde "Recuperar contraseña".
-                </Text>
-                </ScrollView>
-            </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+            <Button title="Iniciar sesión" icon="arrow-forward" iconPosition="right" onPress={handleSignIn} loading={loading} />
+        </AuthTemplate>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-        padding: 24,
-        justifyContent: 'center',   // centra verticalmente
-        alignItems: 'center',       // centra horizontalmente ✅
-    },
-    title: {
-        textAlign: 'center',
-        fontSize: 22,
-        fontWeight: '800',
-        color: '#173049',
-        marginBottom: 22
-    },
-    inputWrap: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        height: 50,
-        gap: 10,
-        width: '100%',              // aseguramos que los inputs sigan tomando todo el ancho
-    },
-    input: { flex: 1 },
-    logoImage: {
-        width: 140,
-        height: 140,
-        marginBottom: 20,
+    passwordBlock: { gap: spacing.md },
+    forgot: { alignSelf: 'flex-end' },
+    formError: {
+        backgroundColor: colors.dangerSoft,
+        borderRadius: radius.sm,
+        padding: spacing.md,
     },
 });
-

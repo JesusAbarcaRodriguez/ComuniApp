@@ -1,91 +1,133 @@
 // src/screens/auth/SignUpScreen.js
-import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { AuthTemplate, AppText, Button, FormField, Icon, PasswordField } from '../../components';
 import { useAuth } from '../../context/AuthProvider';
+import { colors, radius, spacing } from '../../theme';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignUpScreen({ navigation }) {
     const { signUp } = useAuth();
+    const emailRef = useRef(null);
+    const passwordRef = useRef(null);
     const [displayName, setDisplayName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [errors, setErrors] = useState({});
+    const [formError, setFormError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [sentTo, setSentTo] = useState('');
 
     const onSubmit = async () => {
-        if (!email || !password) return Alert.alert('Faltan datos', 'Ingresa email y contraseña');
+        const next = {};
+        if (!email.trim()) next.email = 'Ingresa tu correo.';
+        else if (!EMAIL_RE.test(email.trim())) next.email = 'El correo no es válido.';
+        if (!password) next.password = 'Ingresa una contraseña.';
+        else if (password.length < 6) next.password = 'Debe tener al menos 6 caracteres.';
+        setErrors(next);
+        setFormError('');
+        if (Object.keys(next).length) return;
 
+        setLoading(true);
         try {
-            setLoading(true);
             const { error } = await signUp(email.trim(), password, displayName.trim());
-            setLoading(false);
-
-            if (error) return Alert.alert('Error', error.message);
-
-            Alert.alert(
-                'Revisa tu correo',
-                'Hemos enviado un correo de verificación. Por favor confirma tu dirección y luego inicia sesión.',
-                [{ text: 'OK', onPress: () => navigation.goBack() }]
-            );
+            if (error) return setFormError(error.message);
+            setSentTo(email.trim());
         } catch (e) {
+            setFormError(e.message);
+        } finally {
             setLoading(false);
-            Alert.alert('Error', e.message);
         }
     };
 
-    return (
-        <KeyboardAvoidingView
-            style={{ flex: 1, backgroundColor: '#fff' }}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
-        >
-            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                <ScrollView
-                    keyboardShouldPersistTaps="handled"
-                    contentContainerStyle={styles.container}
-                >
-                <Text style={styles.h1}>Crear cuenta</Text>
+    if (sentTo) {
+        return (
+            <AuthTemplate showLogo={false} safeTop={false}>
+                <View style={styles.success}>
+                    <View style={styles.successIcon}>
+                        <Icon name="mail-unread-outline" size={40} color={colors.primary} />
+                    </View>
+                    <AppText variant="title" align="center">Revisa tu correo</AppText>
+                    <AppText variant="body" tone="secondary" align="center">
+                        Enviamos un enlace de verificación a <AppText variant="body" weight="700">{sentTo}</AppText>.
+                        Confírmalo y luego inicia sesión.
+                    </AppText>
+                </View>
+                <Button title="Ir a iniciar sesión" onPress={() => navigation.goBack()} />
+            </AuthTemplate>
+        );
+    }
 
-            <TextInput
-                placeholder="Tu nombre"
-                style={styles.input}
+    return (
+        <AuthTemplate
+            showLogo={false}
+            safeTop={false}
+            title="Crea tu cuenta"
+            subtitle="Únete a tu comunidad en menos de un minuto"
+        >
+            <FormField
+                label="Nombre"
+                icon="person-outline"
+                placeholder="¿Cómo te llamas?"
+                autoComplete="name"
+                textContentType="name"
+                returnKeyType="next"
+                onSubmitEditing={() => emailRef.current?.focus()}
                 value={displayName}
                 onChangeText={setDisplayName}
+                hint="Así te verán los demás miembros."
             />
-
-            <TextInput
-                placeholder="Email"
+            <FormField
+                ref={emailRef}
+                label="Correo electrónico"
+                icon="mail-outline"
+                placeholder="tu@correo.com"
+                keyboardType="email-address"
                 autoCapitalize="none"
-                style={styles.input}
+                autoCorrect={false}
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(t) => { setEmail(t); if (errors.email) setErrors((e) => ({ ...e, email: undefined })); }}
+                error={errors.email}
             />
-
-            <TextInput
-                placeholder="Contraseña"
-                secureTextEntry
-                style={styles.input}
+            <PasswordField
+                ref={passwordRef}
+                label="Contraseña"
+                icon="lock-closed-outline"
+                placeholder="Mínimo 6 caracteres"
+                autoComplete="new-password"
+                textContentType="newPassword"
+                returnKeyType="go"
+                onSubmitEditing={onSubmit}
                 value={password}
-                onChangeText={setPassword}
-                returnKeyType="done"
-                blurOnSubmit
+                onChangeText={(t) => { setPassword(t); if (errors.password) setErrors((e) => ({ ...e, password: undefined })); }}
+                error={errors.password}
             />
 
-            <Pressable style={styles.primary} onPress={onSubmit} disabled={loading}>
-                <Text style={styles.primaryText}>{loading ? 'Creando...' : 'Registrarse'}</Text>
-            </Pressable>
+            {formError ? (
+                <View style={styles.formError} accessibilityRole="alert">
+                    <AppText variant="caption" tone="danger">{formError}</AppText>
+                </View>
+            ) : null}
 
-            <Text style={{ color: '#6B7280', marginTop: 8, textAlign: 'center' }}>
-                Se enviará un correo de confirmación a {email || 'tu correo'}.
-            </Text>
-                </ScrollView>
-            </TouchableWithoutFeedback>
-        </KeyboardAvoidingView>
+            <Button title="Crear cuenta" onPress={onSubmit} loading={loading} />
+        </AuthTemplate>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flexGrow: 1, padding: 20, justifyContent: 'center', backgroundColor: '#fff' },
-    h1: { fontSize: 24, fontWeight: '800', marginBottom: 14, color: '#111827' },
-    input: { height: 48, borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
-    primary: { backgroundColor: '#4F59F5', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 6 },
-    primaryText: { color: '#fff', fontWeight: '700' },
+    formError: { backgroundColor: colors.dangerSoft, borderRadius: radius.sm, padding: spacing.md },
+    success: { alignItems: 'center', gap: spacing.md, marginBottom: spacing.lg },
+    successIcon: {
+        width: 88,
+        height: 88,
+        borderRadius: radius.pill,
+        backgroundColor: colors.primarySoft,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
 });
